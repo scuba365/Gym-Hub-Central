@@ -4,6 +4,7 @@ import clientsRouter from "./clients";
 import syncRouter from "./sync";
 import dashboardRouter from "./dashboard";
 import inbodyWebhookRouter from "./inbody-webhook";
+import inbodyImportRouter from "./inbody-import";
 
 const router: IRouter = Router();
 
@@ -12,5 +13,6 @@ router.use(clientsRouter);
 router.use(syncRouter);
 router.use(dashboardRouter);
 router.use(inbodyWebhookRouter);
+router.use(inbodyImportRouter);
 
 export default router;

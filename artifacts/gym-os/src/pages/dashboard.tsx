@@ -17,6 +17,7 @@ import {
   SelectValue 
 } from "@/components/ui/select";
 import { SyncButton } from "@/components/sync-button";
+import { InBodyImportButton } from "@/components/inbody-import-button";
 import { ClientCard } from "@/components/client-card";
 import { 
   Users, 
@@ -49,7 +50,10 @@ export default function Dashboard() {
             Command Center
           </p>
         </div>
-        <SyncButton lastSyncedAt={stats?.lastSyncedAt} />
+        <div className="flex items-start gap-2">
+          <InBodyImportButton />
+          <SyncButton lastSyncedAt={stats?.lastSyncedAt} />
+        </div>
       </header>
 
       {/* Stats Bar */}
