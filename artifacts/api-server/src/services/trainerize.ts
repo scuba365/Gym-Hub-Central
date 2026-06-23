@@ -21,7 +21,7 @@ interface TrainerizeWorkout {
   status: "completed" | "assigned" | "skipped";
 }
 
-async function trainerizeRequest(path: string, apiKey: string, accountId: string) {
+async function trainerizeRequest(path: string, apiKey: string, accountId: string): Promise<any> {
   const response = await fetch(`${TRAINERIZE_BASE_URL}${path}`, {
     headers: {
       Authorization: `Bearer ${apiKey}`,
@@ -32,7 +32,20 @@ async function trainerizeRequest(path: string, apiKey: string, accountId: string
   if (!response.ok) {
     throw new Error(`Trainerize API error: ${response.status} ${response.statusText}`);
   }
-  return response.json();
+  return response.json() as Promise<any>;
+}
+
+// Engagement severity: disengaged > at_risk > active > unknown
+// OR semantics: if either source signals disengagement, that wins.
+const ENGAGEMENT_RANK: Record<string, number> = {
+  disengaged: 3,
+  at_risk: 2,
+  active: 1,
+  unknown: 0,
+};
+
+function worstEngagement(a: string, b: string): string {
+  return (ENGAGEMENT_RANK[a] ?? 0) >= (ENGAGEMENT_RANK[b] ?? 0) ? a : b;
 }
 
 export async function syncTrainerize(): Promise<{ clientsUpdated: number; sessionsAdded: number }> {
@@ -144,17 +157,20 @@ export async function syncTrainerize(): Promise<{ clientsUpdated: number; sessio
           .sort((a, b) => b.localeCompare(a));
         const lastTrainingDate = sortedDates[0] || null;
 
-        // Determine engagement status from Trainerize data
-        let engagementStatus = client.engagementStatus;
+        // Determine engagement status from Trainerize data.
+        // Use OR semantics across sources: take the worst (most disengaged) of
+        // whatever TeamUp already computed and what Trainerize indicates.
+        let trainerizeStatus = client.engagementStatus ?? "unknown";
         if (lastTrainingDate) {
           const now = new Date();
           const daysSince = Math.floor(
             (now.getTime() - new Date(lastTrainingDate).getTime()) / (1000 * 60 * 60 * 24)
           );
-          if (daysSince <= 7) engagementStatus = "active";
-          else if (daysSince <= 14) engagementStatus = "at_risk";
-          else engagementStatus = "disengaged";
+          const fromTrainerize =
+            daysSince <= 7 ? "active" : daysSince <= 14 ? "at_risk" : "disengaged";
+          trainerizeStatus = worstEngagement(client.engagementStatus ?? "unknown", fromTrainerize);
         }
+        const engagementStatus = trainerizeStatus;
 
         await db
           .update(clientsTable)

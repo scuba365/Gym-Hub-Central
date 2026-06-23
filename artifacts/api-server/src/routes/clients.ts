@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
 import { clientsTable, inbodyScansTable, attendanceRecordsTable } from "@workspace/db";
-import { eq, ilike, and, sql } from "drizzle-orm";
+import { eq, and, sql } from "drizzle-orm";
 import {
   ListClientsQueryParams,
   UpdateClientBody,
@@ -41,32 +41,32 @@ router.get("/clients", async (req, res) => {
 
     const clients = await query;
 
-    const result = clients.map((c) => ({
-      id: c.id,
-      name: c.name,
-      email: c.email,
-      photoUrl: c.photoUrl,
-      goals: c.goals,
-      needsMealPlan: c.needsMealPlan,
-      notes: c.notes,
-      engagementStatus: c.engagementStatus,
-      weeklyAttendanceAvg: c.weeklyAttendanceAvg,
-      lastAttendanceDate: c.lastAttendanceDate,
-      lastTrainingDate: c.lastTrainingDate,
-      workoutCompliancePct: c.workoutCompliancePct,
-      latestScanDate: c.latestScanDate,
-      latestWeight: c.latestWeight,
-      latestBodyFatPct: c.latestBodyFatPct,
-      latestMuscleMass: c.latestMuscleMass,
-      lastSyncedAt: c.lastSyncedAt,
-      teamupId: c.teamupId,
-      trainerizeId: c.trainerizeId,
-      inbodyId: c.inbodyId,
-    }));
-
-    res.json(result);
+    return res.json(
+      clients.map((c) => ({
+        id: c.id,
+        name: c.name,
+        email: c.email,
+        photoUrl: c.photoUrl,
+        goals: c.goals,
+        needsMealPlan: c.needsMealPlan,
+        notes: c.notes,
+        engagementStatus: c.engagementStatus,
+        weeklyAttendanceAvg: c.weeklyAttendanceAvg,
+        lastAttendanceDate: c.lastAttendanceDate,
+        lastTrainingDate: c.lastTrainingDate,
+        workoutCompliancePct: c.workoutCompliancePct,
+        latestScanDate: c.latestScanDate,
+        latestWeight: c.latestWeight,
+        latestBodyFatPct: c.latestBodyFatPct,
+        latestMuscleMass: c.latestMuscleMass,
+        lastSyncedAt: c.lastSyncedAt,
+        teamupId: c.teamupId,
+        trainerizeId: c.trainerizeId,
+        inbodyId: c.inbodyId,
+      }))
+    );
   } catch (err) {
-    res.status(500).json({ error: "Failed to fetch clients" });
+    return res.status(500).json({ error: "Failed to fetch clients" });
   }
 });
 
@@ -123,7 +123,7 @@ router.get("/clients/:id", async (req, res) => {
         className: a.className,
       }));
 
-    res.json({
+    return res.json({
       id: client.id,
       name: client.name,
       email: client.email,
@@ -148,7 +148,7 @@ router.get("/clients/:id", async (req, res) => {
       recentAttendance: sortedAttendance,
     });
   } catch (err) {
-    res.status(500).json({ error: "Failed to fetch client" });
+    return res.status(500).json({ error: "Failed to fetch client" });
   }
 });
 
@@ -179,7 +179,7 @@ router.put("/clients/:id", async (req, res) => {
       return res.status(404).json({ error: "Client not found" });
     }
 
-    res.json({
+    return res.json({
       id: updated.id,
       name: updated.name,
       email: updated.email,
@@ -202,7 +202,7 @@ router.put("/clients/:id", async (req, res) => {
       inbodyId: updated.inbodyId,
     });
   } catch (err) {
-    res.status(500).json({ error: "Failed to update client" });
+    return res.status(500).json({ error: "Failed to update client" });
   }
 });
 
@@ -218,7 +218,7 @@ router.get("/clients/:id/scans", async (req, res) => {
       .from(inbodyScansTable)
       .where(eq(inbodyScansTable.clientId, parsed.data.id));
 
-    res.json(
+    return res.json(
       scans
         .sort((a, b) => b.scannedAt.localeCompare(a.scannedAt))
         .map((s) => ({
@@ -235,7 +235,7 @@ router.get("/clients/:id/scans", async (req, res) => {
         }))
     );
   } catch (err) {
-    res.status(500).json({ error: "Failed to fetch scans" });
+    return res.status(500).json({ error: "Failed to fetch scans" });
   }
 });
 
@@ -251,7 +251,7 @@ router.get("/clients/:id/attendance", async (req, res) => {
       .from(attendanceRecordsTable)
       .where(eq(attendanceRecordsTable.clientId, parsed.data.id));
 
-    res.json(
+    return res.json(
       records
         .sort((a, b) => b.date.localeCompare(a.date))
         .map((r) => ({
@@ -262,7 +262,7 @@ router.get("/clients/:id/attendance", async (req, res) => {
         }))
     );
   } catch (err) {
-    res.status(500).json({ error: "Failed to fetch attendance" });
+    return res.status(500).json({ error: "Failed to fetch attendance" });
   }
 });
 

@@ -20,7 +20,7 @@ interface TeamupEvent {
   signup_list?: Array<{ name: string; email?: string; member_id?: string }>;
 }
 
-async function teamupRequest(path: string, apiKey: string) {
+async function teamupRequest(path: string, apiKey: string): Promise<any> {
   const response = await fetch(`${TEAMUP_BASE_URL}${path}`, {
     headers: {
       "Teamup-Token": apiKey,
@@ -30,7 +30,7 @@ async function teamupRequest(path: string, apiKey: string) {
   if (!response.ok) {
     throw new Error(`TeamUp API error: ${response.status} ${response.statusText}`);
   }
-  return response.json();
+  return response.json() as Promise<any>;
 }
 
 export async function syncTeamup(): Promise<{ clientsUpdated: number; attendanceAdded: number }> {

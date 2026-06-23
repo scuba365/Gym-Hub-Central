@@ -18,7 +18,7 @@ interface InBodyScanResult {
   raw?: Record<string, unknown>;
 }
 
-async function inbodyRequest(path: string, apiKey: string, baseUrl: string) {
+async function inbodyRequest(path: string, apiKey: string, baseUrl: string): Promise<any> {
   const response = await fetch(`${baseUrl}${path}`, {
     headers: {
       Authorization: `Bearer ${apiKey}`,
@@ -28,7 +28,7 @@ async function inbodyRequest(path: string, apiKey: string, baseUrl: string) {
   if (!response.ok) {
     throw new Error(`InBody API error: ${response.status} ${response.statusText}`);
   }
-  return response.json();
+  return response.json() as Promise<any>;
 }
 
 export async function syncInBody(): Promise<{ scansAdded: number }> {

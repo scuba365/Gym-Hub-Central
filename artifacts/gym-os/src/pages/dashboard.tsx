@@ -30,12 +30,14 @@ import {
 export default function Dashboard() {
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<string>("all");
+  const [mealPlanOnly, setMealPlanOnly] = useState(false);
 
   const { data: stats, isLoading: statsLoading } = useGetDashboardStats();
   
   const { data: clients, isLoading: clientsLoading } = useListClients({
     search: search.length > 2 ? search : undefined,
     engagementStatus: status !== "all" ? status as ListClientsEngagementStatus : undefined,
+    needsMealPlan: mealPlanOnly ? true : undefined,
   });
 
   return (
@@ -115,6 +117,14 @@ export default function Dashboard() {
             </SelectContent>
           </Select>
         </div>
+        <Button
+          variant={mealPlanOnly ? "default" : "outline"}
+          onClick={() => setMealPlanOnly((v) => !v)}
+          className={mealPlanOnly ? "bg-primary text-primary-foreground" : "border-border text-muted-foreground hover:text-foreground"}
+        >
+          <UtensilsCrossed className="h-4 w-4 mr-2" />
+          Needs Meal Plan
+        </Button>
       </div>
 
       {clientsLoading ? (
