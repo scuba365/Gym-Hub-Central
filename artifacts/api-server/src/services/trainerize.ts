@@ -3,44 +3,50 @@ import { clientsTable, trainingSessionsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { logger } from "../lib/logger";
 
-const TRAINERIZE_BASE_URL = "https://api.trainerize.com/v1";
+const TRAINERIZE_BASE_URL = "https://api.trainerize.com/v03";
 
 interface TrainerizeClient {
-  id: string;
-  first_name: string;
-  last_name: string;
+  id: number;
+  firstName: string;
+  lastName: string;
   email?: string;
-  photo_url?: string;
+  profileIconUrl?: string;
+  latestSignedIn?: string | null;
+  status: string;
+  trialStatus: string;
 }
 
-interface TrainerizeWorkout {
-  id: string;
-  client_id: string;
-  date: string;
-  name: string;
-  status: "completed" | "assigned" | "skipped";
+function getBasicAuth(): string {
+  const groupId = process.env.TRAINERIZE_GROUP_ID;
+  const token = process.env.TRAINERIZE_TOKEN;
+  if (!groupId || !token) throw new Error("Trainerize credentials missing");
+  return Buffer.from(`${groupId}:${token}`).toString("base64");
 }
 
-async function trainerizeRequest(path: string, apiKey: string, accountId: string): Promise<any> {
+async function trainerizePost(path: string, body: Record<string, unknown>): Promise<any> {
+  const auth = getBasicAuth();
   const response = await fetch(`${TRAINERIZE_BASE_URL}${path}`, {
+    method: "POST",
     headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "X-Account-Id": accountId,
+      Authorization: `Basic ${auth}`,
       "Content-Type": "application/json",
+      Accept: "application/json",
     },
+    body: JSON.stringify(body),
   });
   if (!response.ok) {
-    throw new Error(`Trainerize API error: ${response.status} ${response.statusText}`);
+    const text = await response.text();
+    throw new Error(`Trainerize API error ${response.status}: ${text.slice(0, 200)}`);
   }
-  return response.json() as Promise<any>;
+  return response.json();
 }
 
 export async function syncTrainerize(): Promise<{ clientsUpdated: number; sessionsAdded: number }> {
-  const apiKey = process.env.TRAINERIZE_API_KEY;
-  const accountId = process.env.TRAINERIZE_ACCOUNT_ID;
+  const groupId = process.env.TRAINERIZE_GROUP_ID;
+  const token = process.env.TRAINERIZE_TOKEN;
 
-  if (!apiKey || !accountId) {
-    logger.warn("Trainerize credentials not configured (TRAINERIZE_API_KEY, TRAINERIZE_ACCOUNT_ID)");
+  if (!groupId || !token) {
+    logger.warn("Trainerize credentials not configured (TRAINERIZE_GROUP_ID, TRAINERIZE_TOKEN)");
     return { clientsUpdated: 0, sessionsAdded: 0 };
   }
 
@@ -48,31 +54,38 @@ export async function syncTrainerize(): Promise<{ clientsUpdated: number; sessio
   let sessionsAdded = 0;
 
   try {
-    // Fetch all clients
-    const clientsData = await trainerizeRequest("/clients", apiKey, accountId);
-    const trainerizeClients: TrainerizeClient[] = clientsData.clients || clientsData || [];
+    // Fetch all clients in batches of 50
+    const allClients: TrainerizeClient[] = [];
+    let start = 0;
+    const count = 50;
 
-    for (const tc of trainerizeClients) {
-      const name = `${tc.first_name} ${tc.last_name}`.trim();
-      const email = tc.email?.toLowerCase();
+    while (true) {
+      const data = await trainerizePost("/user/getClientList", { start, count });
+      const batch: TrainerizeClient[] = data.users || [];
+      allClients.push(...batch);
+      if (batch.length < count) break;
+      start += count;
+    }
 
-      // Find or create client
+    logger.info({ count: allClients.length }, "Trainerize: clients fetched");
+
+    for (const tc of allClients) {
+      // Skip inactive/deleted clients
+      if (tc.status !== "active") continue;
+
+      const name = `${tc.firstName} ${tc.lastName}`.trim();
+      const email = tc.email?.toLowerCase() || null;
+      const trainerizeId = String(tc.id);
+
       let client = null;
+
       if (email) {
-        const found = await db
-          .select()
-          .from(clientsTable)
-          .where(eq(clientsTable.email, email))
-          .limit(1);
+        const found = await db.select().from(clientsTable).where(eq(clientsTable.email, email)).limit(1);
         client = found[0];
       }
 
       if (!client) {
-        const found = await db
-          .select()
-          .from(clientsTable)
-          .where(eq(clientsTable.trainerizeId, tc.id))
-          .limit(1);
+        const found = await db.select().from(clientsTable).where(eq(clientsTable.trainerizeId, trainerizeId)).limit(1);
         client = found[0];
       }
 
@@ -81,80 +94,47 @@ export async function syncTrainerize(): Promise<{ clientsUpdated: number; sessio
           .insert(clientsTable)
           .values({
             name,
-            email: email || null,
-            photoUrl: tc.photo_url || null,
-            trainerizeId: tc.id,
+            email,
+            photoUrl: tc.profileIconUrl || null,
+            trainerizeId,
           })
           .returning();
         client = newClient;
         clientsUpdated++;
       } else {
-        await db
-          .update(clientsTable)
-          .set({
-            trainerizeId: tc.id,
-            photoUrl: tc.photo_url || client.photoUrl,
-          })
-          .where(eq(clientsTable.id, client.id));
+        await db.update(clientsTable).set({
+          trainerizeId,
+          photoUrl: tc.profileIconUrl || client.photoUrl,
+        }).where(eq(clientsTable.id, client.id));
       }
 
-      // Fetch workout sessions for this client (last 60 days)
-      try {
-        const endDate = new Date();
-        const startDate = new Date();
-        startDate.setDate(startDate.getDate() - 60);
+      // Use latestSignedIn as a proxy for last training activity
+      // and record it as a training session if not already present
+      if (tc.latestSignedIn) {
+        const lastDate = tc.latestSignedIn.split(" ")[0]; // "2026-06-22 18:05:02" → "2026-06-22"
+        const externalId = `trainerize-signin-${tc.id}-${lastDate}`;
 
-        const workoutsData = await trainerizeRequest(
-          `/clients/${tc.id}/workouts?start=${startDate.toISOString().split("T")[0]}&end=${endDate.toISOString().split("T")[0]}`,
-          apiKey,
-          accountId
-        );
+        const existing = await db
+          .select()
+          .from(trainingSessionsTable)
+          .where(eq(trainingSessionsTable.externalId, externalId))
+          .limit(1);
 
-        const workouts: TrainerizeWorkout[] = workoutsData.workouts || workoutsData || [];
-
-        for (const w of workouts) {
-          const externalId = `trainerize-${w.id}`;
-          const existing = await db
-            .select()
-            .from(trainingSessionsTable)
-            .where(eq(trainingSessionsTable.externalId, externalId))
-            .limit(1);
-
-          if (existing.length === 0) {
-            await db.insert(trainingSessionsTable).values({
-              clientId: client.id,
-              date: w.date,
-              workoutName: w.name || null,
-              completed: w.status === "completed",
-              externalId,
-            });
-            sessionsAdded++;
-          }
+        if (existing.length === 0) {
+          await db.insert(trainingSessionsTable).values({
+            clientId: client.id,
+            date: lastDate,
+            workoutName: "App Activity",
+            completed: true,
+            externalId,
+          });
+          sessionsAdded++;
         }
 
-        // Calculate workout compliance for this client
-        const totalAssigned = workouts.length;
-        const completed = workouts.filter((w) => w.status === "completed").length;
-        const compliancePct = totalAssigned > 0 ? (completed / totalAssigned) * 100 : null;
-
-        // Find last training date
-        const sortedDates = workouts
-          .filter((w) => w.status === "completed")
-          .map((w) => w.date)
-          .sort((a, b) => b.localeCompare(a));
-        const lastTrainingDate = sortedDates[0] || null;
-
-        // Write training metrics only; engagement status is computed centrally
-        // after all sync sources complete (see computeAllEngagementStatuses in sync.ts).
-        await db
-          .update(clientsTable)
-          .set({
-            workoutCompliancePct: compliancePct,
-            lastTrainingDate,
-          })
-          .where(eq(clientsTable.id, client.id));
-      } catch (err) {
-        logger.warn({ err, clientId: tc.id }, "Failed to fetch Trainerize workouts for client");
+        // Update last training date
+        await db.update(clientsTable).set({
+          lastTrainingDate: lastDate,
+        }).where(eq(clientsTable.id, client.id));
       }
     }
   } catch (err) {

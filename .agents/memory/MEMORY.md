@@ -1,0 +1,1 @@
+- [GoTeamUp API quirks](goteamup-api.md) — key filter params, pagination gotchas, active-member strategy for this gym's setup

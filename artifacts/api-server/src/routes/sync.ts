@@ -55,22 +55,24 @@ router.post("/sync", async (req, res) => {
   const configuredSources: string[] = [];
   const missingSources: string[] = [];
 
-  if (process.env.TEAMUP_API_KEY && process.env.TEAMUP_CALENDAR_KEY) {
+  if (process.env.TEAMUP_M2M_TOKEN) {
     configuredSources.push("TeamUp");
   } else {
     missingSources.push("TeamUp");
   }
 
-  if (process.env.TRAINERIZE_API_KEY && process.env.TRAINERIZE_ACCOUNT_ID) {
+  if (process.env.TRAINERIZE_TOKEN && process.env.TRAINERIZE_GROUP_ID) {
     configuredSources.push("Trainerize");
   } else {
     missingSources.push("Trainerize");
   }
 
-  if (process.env.INBODY_API_KEY) {
-    configuredSources.push("InBody");
+  // InBody is webhook-based (push), not polled.
+  // Mark configured only when INBODY_WEBHOOK_SECRET is set (required for auth).
+  if (process.env.INBODY_WEBHOOK_SECRET) {
+    configuredSources.push("InBody (webhook)");
   } else {
-    missingSources.push("InBody");
+    missingSources.push("InBody (webhook — set INBODY_WEBHOOK_SECRET)");
   }
 
   const errors: string[] = [];

@@ -1,0 +1,123 @@
+
+* /accomplishment/getList POST
+* /accomplishment/getStatsList
+https://api.trainerize.com/v03/appStore/verifyUserToken
+* /appointment/add POST
+* /appointment/getAppointmentTypeList POST
+* /appointment/getList POST
+* /appointment/getAppointmentType
+* /bodystats/add POST
+* /bodystats/delete POST
+* /bodystats/get POST
+* /bodystats/set
+/calendar/getList
+* /challenge/getList POST
+* /challenge/getLeaderboardParticipantList POST
+* /challenge/getThresholdParticipantList POST
+* /challenge/addParticipants POST
+* /challenge/removeParticipants
+* /compliance/getGroupCompliance POST
+* /compliance/getUserCompliance
+* /dailyCardio/add POST
+* /dailyCardio/get POST
+* /dailyCardio/set
+* /dailyNutrition/getList POST
+* /dailyNutrition/get POST
+* /dailyNutrition/getCustomFoodList POST
+* /dailyNutrition/addCustomFood POST
+* /dailyNutrition/setCustomFood POST
+* /dailyNutrition/deleteCustomFood POST
+* /dailyNutrition/getMealTemplate POST
+* /dailyNutrition/getMealTemplateList POST
+* /dailyNutrition/addMealTemplate POST
+* /dailyNutrition/setMealTemplate POST
+* /dailyNutrition/deleteMealTemplate
+* /dailyWorkout/get POST
+* /dailyWorkout/set
+* /exercise/get POST
+* /exercise/set POST
+* /exercise/add
+/file/upload
+* /goal/add POST
+* /goal/delete POST
+* /goal/getList POST
+* /goal/get POST
+* /goal/set POST
+* /goal/setProgress POST
+* /trainerNote/delete
+* /habits/add POST
+* /habits/deleteDailyItem POST
+* /habits/getList POST
+* /habits/getDailyItem POST
+* /habits/setDailyItem
+* /healthData/getList POST
+* /healthData/getListSleep
+/location/getList
+* /message/get POST
+* /message/getThreads POST
+* /message/reply POST
+* /message/sendMass POST
+* /message/send
+* /mealPlan/delete POST
+* /mealPlan/generate POST
+* /mealPlan/get POST
+* /mealPlan/set
+* /photos/getList POST
+* /photos/getByID POST
+* /photos/add
+* /program/addUser POST
+* /program/copyToUser POST
+* /program/copyTrainingPlanToClient POST
+* /program/deleteUser POST
+* /program/get POST
+* /program/getCalendarList POST
+* /program/getTrainingPlanList POST
+* /program/getList POST
+* /program/getUserList POST
+* /program/getUserProgramList POST
+* /program/move POST
+* /program/setUserProgram
+* /trainingPlan/add POST
+* /trainingPlan/delete POST
+* /trainingPlan/getList POST
+* /trainingPlan/getWorkoutDefList
+* /trainerNote/add POST
+* /trainerNote/get POST
+* /trainerNote/getList POST
+* /trainerNote/set
+* /user/add POST
+* /user/addTag POST
+* /user/deleteTag POST
+* /user/delete POST
+* /user/find POST
+* /user/getClientList POST
+* /user/getClientSummary POST
+* /user/getTrainerList POST
+* /user/getProfile POST
+* /user/getSettings POST
+* /user/getSetupLink POST
+* /user/getLoginToken POST
+* /user/switchTrainer POST
+* /user/setProfile POST
+* /user/setStatus POST
+* /user/setPrivilege POST
+* /user/setTag
+/userNotification/getUnreadCount
+* /userTag/add POST
+* /userTag/delete POST
+* /userTag/getList POST
+* /userTag/rename
+* /userGroup/add POST
+* /userGroup/addUser POST
+* /userGroup/deleteUser POST
+* /userGroup/delete POST
+* /userGroup/delete POST
+* /userGroup/getList POST
+* /userGroup/getAddons POST
+* /userGroup/getUserList POST
+* /userGroup/set POST
+* /userGroup/setAddons
+* /workoutDef/get POST
+* /workoutDef/add POST
+* /workoutDef/set
+/workoutTemplate/getList
