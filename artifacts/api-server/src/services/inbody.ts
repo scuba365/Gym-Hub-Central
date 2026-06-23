@@ -46,26 +46,9 @@ export async function processInBodyWebhook(
 
   let client = null;
 
-  if (email) {
-    const found = await db
-      .select()
-      .from(clientsTable)
-      .where(eq(clientsTable.email, email))
-      .limit(1);
-    client = found[0];
-  }
-
-  if (!client && memberId) {
-    const found = await db
-      .select()
-      .from(clientsTable)
-      .where(eq(clientsTable.inbodyId, memberId))
-      .limit(1);
-    client = found[0];
-  }
-
-  // Match by phone — InBody MemberID is the client's phone number, which is
-  // also stored on the client record after a TeamUp sync.
+  // 1. Phone is the most reliable key: InBody devices use the member's phone
+  //    as their primary MemberID, which is also stored via the TeamUp sync.
+  //    Phone-first prevents false matches when emails are shared or reused.
   if (!client && memberPhone) {
     const found = await db
       .select()
@@ -78,6 +61,27 @@ export async function processInBodyWebhook(
     }
   }
 
+  // 2. Stored InBody ID (set on first import/webhook for this member).
+  if (!client && memberId) {
+    const found = await db
+      .select()
+      .from(clientsTable)
+      .where(eq(clientsTable.inbodyId, memberId))
+      .limit(1);
+    client = found[0];
+  }
+
+  // 3. Email — less reliable for gym clients but still a useful fallback.
+  if (!client && email) {
+    const found = await db
+      .select()
+      .from(clientsTable)
+      .where(eq(clientsTable.email, email))
+      .limit(1);
+    client = found[0];
+  }
+
+  // 4. Name — last resort; may collide on common names.
   if (!client && memberName) {
     const found = await db
       .select()
