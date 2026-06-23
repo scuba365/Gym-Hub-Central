@@ -6,6 +6,8 @@ import {
   useGetClientAttendance, 
   useUpdateClient,
   getGetClientQueryKey,
+  getGetClientScansQueryKey,
+  getGetClientAttendanceQueryKey,
   getListClientsQueryKey
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -51,11 +53,11 @@ export default function ClientDetail() {
   });
   
   const { data: scans, isLoading: scansLoading } = useGetClientScans(id, { 
-    query: { enabled: !!id } 
+    query: { enabled: !!id, queryKey: getGetClientScansQueryKey(id) } 
   });
   
   const { data: attendance, isLoading: attendanceLoading } = useGetClientAttendance(id, { 
-    query: { enabled: !!id } 
+    query: { enabled: !!id, queryKey: getGetClientAttendanceQueryKey(id) } 
   });
 
   const updateMutation = useUpdateClient();

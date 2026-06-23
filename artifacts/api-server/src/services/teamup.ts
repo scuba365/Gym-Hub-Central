@@ -157,23 +157,13 @@ async function recalculateAttendanceAverages() {
     const lastRecord = records.sort((a, b) => b.date.localeCompare(a.date))[0];
     const lastDate = lastRecord?.date || null;
 
-    // Calculate engagement based on last attendance
-    let engagementStatus = "unknown";
-    if (lastDate) {
-      const daysSinceLastAttendance = Math.floor(
-        (now.getTime() - new Date(lastDate).getTime()) / (1000 * 60 * 60 * 24)
-      );
-      if (daysSinceLastAttendance <= 7) engagementStatus = "active";
-      else if (daysSinceLastAttendance <= 14) engagementStatus = "at_risk";
-      else engagementStatus = "disengaged";
-    }
-
+    // Write attendance metrics only; engagement status is computed centrally
+    // after all sync sources complete (see computeAllEngagementStatuses in sync.ts).
     await db
       .update(clientsTable)
       .set({
         weeklyAttendanceAvg: weeklyAvg,
         lastAttendanceDate: lastDate,
-        engagementStatus,
         lastSyncedAt: now.toISOString(),
       })
       .where(eq(clientsTable.id, client.id));

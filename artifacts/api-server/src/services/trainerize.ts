@@ -35,19 +35,6 @@ async function trainerizeRequest(path: string, apiKey: string, accountId: string
   return response.json() as Promise<any>;
 }
 
-// Engagement severity: disengaged > at_risk > active > unknown
-// OR semantics: if either source signals disengagement, that wins.
-const ENGAGEMENT_RANK: Record<string, number> = {
-  disengaged: 3,
-  at_risk: 2,
-  active: 1,
-  unknown: 0,
-};
-
-function worstEngagement(a: string, b: string): string {
-  return (ENGAGEMENT_RANK[a] ?? 0) >= (ENGAGEMENT_RANK[b] ?? 0) ? a : b;
-}
-
 export async function syncTrainerize(): Promise<{ clientsUpdated: number; sessionsAdded: number }> {
   const apiKey = process.env.TRAINERIZE_API_KEY;
   const accountId = process.env.TRAINERIZE_ACCOUNT_ID;
@@ -157,27 +144,13 @@ export async function syncTrainerize(): Promise<{ clientsUpdated: number; sessio
           .sort((a, b) => b.localeCompare(a));
         const lastTrainingDate = sortedDates[0] || null;
 
-        // Determine engagement status from Trainerize data.
-        // Use OR semantics across sources: take the worst (most disengaged) of
-        // whatever TeamUp already computed and what Trainerize indicates.
-        let trainerizeStatus = client.engagementStatus ?? "unknown";
-        if (lastTrainingDate) {
-          const now = new Date();
-          const daysSince = Math.floor(
-            (now.getTime() - new Date(lastTrainingDate).getTime()) / (1000 * 60 * 60 * 24)
-          );
-          const fromTrainerize =
-            daysSince <= 7 ? "active" : daysSince <= 14 ? "at_risk" : "disengaged";
-          trainerizeStatus = worstEngagement(client.engagementStatus ?? "unknown", fromTrainerize);
-        }
-        const engagementStatus = trainerizeStatus;
-
+        // Write training metrics only; engagement status is computed centrally
+        // after all sync sources complete (see computeAllEngagementStatuses in sync.ts).
         await db
           .update(clientsTable)
           .set({
             workoutCompliancePct: compliancePct,
             lastTrainingDate,
-            engagementStatus,
           })
           .where(eq(clientsTable.id, client.id));
       } catch (err) {

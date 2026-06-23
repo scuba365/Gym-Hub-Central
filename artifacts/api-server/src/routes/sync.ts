@@ -1,8 +1,51 @@
 import { Router } from "express";
+import { eq } from "drizzle-orm";
+import { db } from "@workspace/db";
+import { clientsTable } from "@workspace/db";
 import { syncTeamup } from "../services/teamup";
 import { syncTrainerize } from "../services/trainerize";
 import { syncInBody } from "../services/inbody";
 import { logger } from "../lib/logger";
+
+// Centralized, deterministic engagement computation.
+// Called after all sync sources have finished writing their source-specific fields
+// (lastAttendanceDate from TeamUp, lastTrainingDate from Trainerize).
+// OR semantics: a client is disengaged if EITHER attendance OR training signals disengagement.
+async function computeAllEngagementStatuses(): Promise<void> {
+  const clients = await db.select().from(clientsTable);
+  const now = new Date();
+
+  const engagementRank = (days: number | null): number => {
+    if (days === null) return 0;
+    if (days <= 7) return 1;
+    if (days <= 14) return 2;
+    return 3;
+  };
+
+  const engagementLabel = (rank: number): string => {
+    if (rank === 3) return "disengaged";
+    if (rank === 2) return "at_risk";
+    if (rank === 1) return "active";
+    return "unknown";
+  };
+
+  for (const client of clients) {
+    const attendanceDays = client.lastAttendanceDate
+      ? Math.floor((now.getTime() - new Date(client.lastAttendanceDate).getTime()) / 86400000)
+      : null;
+    const trainingDays = client.lastTrainingDate
+      ? Math.floor((now.getTime() - new Date(client.lastTrainingDate).getTime()) / 86400000)
+      : null;
+
+    const worstRank = Math.max(engagementRank(attendanceDays), engagementRank(trainingDays));
+    const engagementStatus = engagementLabel(worstRank);
+
+    await db
+      .update(clientsTable)
+      .set({ engagementStatus })
+      .where(eq(clientsTable.id, client.id));
+  }
+}
 
 const router = Router();
 
@@ -64,10 +107,13 @@ router.post("/sync", async (req, res) => {
       errors.push(`InBody: ${inbodyResult.reason?.message || "Unknown error"}`);
     }
 
+    // Compute engagement status from merged source data after all writes complete.
+    await computeAllEngagementStatuses();
+
     const elapsed = Date.now() - startTime;
     logger.info({ elapsed, clientsUpdated, attendanceRecordsAdded, trainingSessionsAdded, scansAdded }, "Sync complete");
 
-    res.json({
+    return res.json({
       success: errors.length === 0,
       clientsUpdated,
       attendanceRecordsAdded,
@@ -80,7 +126,7 @@ router.post("/sync", async (req, res) => {
     });
   } catch (err) {
     logger.error({ err }, "Sync failed");
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       clientsUpdated: 0,
       attendanceRecordsAdded: 0,

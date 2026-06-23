@@ -92,8 +92,12 @@ export function ClientCard({ client }: { client: ClientSummary }) {
               <p className="text-muted-foreground text-[10px] uppercase font-semibold tracking-wider flex items-center gap-1 mb-1">
                 Current Stats
               </p>
-              <p className="font-mono text-foreground">
-                {client.latestWeight ? `${client.latestWeight}kg` : "-"} / {client.latestBodyFatPct ? `${client.latestBodyFatPct}%` : "-"}
+              <p className="font-mono text-foreground text-xs">
+                {client.latestWeight ? `${client.latestWeight}kg` : "-"}{" "}
+                <span className="text-muted-foreground">/</span>{" "}
+                {client.latestBodyFatPct ? `${client.latestBodyFatPct}%bf` : "-"}{" "}
+                <span className="text-muted-foreground">/</span>{" "}
+                {client.latestMuscleMass ? `${client.latestMuscleMass}kg↑` : "-"}
               </p>
             </div>
           </div>
