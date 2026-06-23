@@ -3,6 +3,17 @@ import { clientsTable, inbodyScansTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { logger } from "../lib/logger";
 
+/**
+ * Strip all non-digit characters for consistent phone matching.
+ * InBody sends MemberID as a phone number (digits only or with separators).
+ * TeamUp stores phone in the same normalised form after its sync.
+ */
+function normalisePhone(raw: string | null | undefined): string | null {
+  if (!raw) return null;
+  const digits = raw.replace(/\D/g, "");
+  return digits.length >= 7 ? digits : null;
+}
+
 export interface InBodyWebhookPayload {
   EquipSerial?: string;
   MemberID?: string;
@@ -27,7 +38,11 @@ export async function processInBodyWebhook(
   const email = payload.email?.toLowerCase() || null;
   const measurementDate = payload.MeasurementDate || new Date().toISOString().split("T")[0];
 
-  logger.info({ memberId, memberName, measurementDate }, "Processing InBody webhook scan");
+  // InBody uses phone numbers as MemberID — normalise for matching against the
+  // phone column populated by the TeamUp sync.
+  const memberPhone = memberId ? normalisePhone(memberId) : null;
+
+  logger.info({ memberId, memberPhone, memberName, measurementDate }, "Processing InBody webhook scan");
 
   let client = null;
 
@@ -47,6 +62,20 @@ export async function processInBodyWebhook(
       .where(eq(clientsTable.inbodyId, memberId))
       .limit(1);
     client = found[0];
+  }
+
+  // Match by phone — InBody MemberID is the client's phone number, which is
+  // also stored on the client record after a TeamUp sync.
+  if (!client && memberPhone) {
+    const found = await db
+      .select()
+      .from(clientsTable)
+      .where(eq(clientsTable.phone, memberPhone))
+      .limit(1);
+    client = found[0];
+    if (client) {
+      logger.info({ clientId: client.id, memberPhone }, "InBody: matched client by phone number");
+    }
   }
 
   if (!client && memberName) {

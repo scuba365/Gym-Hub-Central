@@ -1,1 +1,2 @@
 - [GoTeamUp API quirks](goteamup-api.md) — key filter params, pagination gotchas, active-member strategy for this gym's setup
+- [DB schema changes require declaration rebuild](db-declarations-rebuild.md) — after editing lib/db/src/schema/*.ts, run `tsc -p tsconfig.json` in lib/db before typechecking dependents.

@@ -7,11 +7,24 @@ const GOTEAMUP_BASE = "https://goteamup.com/api/v2";
 const PAGE_SIZE = 100;
 const SYNC_DAYS = 28;
 
+/**
+ * Strip all non-digit characters and return a canonical phone string.
+ * Returns null if the result is empty or too short to be a valid number.
+ * This matches InBody's MemberID format (digits only).
+ */
+function normalisePhone(raw: string | null | undefined): string | null {
+  if (!raw) return null;
+  const digits = raw.replace(/\D/g, "");
+  return digits.length >= 7 ? digits : null;
+}
+
 interface GoTeamUpCustomer {
   id: number;
   first_name: string;
   last_name: string;
   email?: string;
+  phone_number?: string;
+  mobile?: string;
 }
 
 interface GoTeamUpEvent {
@@ -163,10 +176,16 @@ export async function syncTeamup(): Promise<{ clientsUpdated: number; attendance
       const name = `${c.first_name} ${c.last_name}`.trim();
       const email = c.email?.toLowerCase() || null;
       const teamupId = String(c.id);
+      // GoTeamUp returns phone as phone_number or mobile depending on API version
+      const phone = normalisePhone(c.phone_number || c.mobile || null);
 
       let client = null;
       if (email) {
         const found = await db.select().from(clientsTable).where(eq(clientsTable.email, email)).limit(1);
+        client = found[0];
+      }
+      if (!client && phone) {
+        const found = await db.select().from(clientsTable).where(eq(clientsTable.phone, phone)).limit(1);
         client = found[0];
       }
       if (!client) {
@@ -175,11 +194,17 @@ export async function syncTeamup(): Promise<{ clientsUpdated: number; attendance
       }
 
       if (!client) {
-        const [newClient] = await db.insert(clientsTable).values({ name, email, teamupId }).returning();
+        const [newClient] = await db.insert(clientsTable).values({ name, email, phone, teamupId }).returning();
         client = newClient;
         clientsUpdated++;
-      } else if (!client.teamupId) {
-        await db.update(clientsTable).set({ teamupId }).where(eq(clientsTable.id, client.id));
+      } else {
+        // Always keep phone and teamupId up to date
+        const updates: Record<string, unknown> = {};
+        if (!client.teamupId) updates.teamupId = teamupId;
+        if (phone && !client.phone) updates.phone = phone;
+        if (Object.keys(updates).length > 0) {
+          await db.update(clientsTable).set(updates).where(eq(clientsTable.id, client.id));
+        }
       }
 
       customerDbMap.set(c.id, client.id);
