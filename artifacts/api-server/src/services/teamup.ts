@@ -1,6 +1,6 @@
 import { db } from "@workspace/db";
 import { clientsTable, attendanceRecordsTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { eq, gt } from "drizzle-orm";
 import { logger } from "../lib/logger";
 
 const GOTEAMUP_BASE = "https://goteamup.com/api/v2";
@@ -97,13 +97,21 @@ async function fetchActiveCustomers(
  * (confirmed working: returns only events >= the given date).
  */
 async function fetchRecentEvents(token: string, cutoffDate: string): Promise<GoTeamUpEvent[]> {
+  const todayStr = new Date().toISOString().split("T")[0];
   const all: GoTeamUpEvent[] = [];
   let nextUrl: string | null =
-    `${GOTEAMUP_BASE}/events?page_size=${PAGE_SIZE}&starts_at_gte=${cutoffDate}`;
+    `${GOTEAMUP_BASE}/events?page_size=${PAGE_SIZE}&starts_at_gte=${cutoffDate}&starts_at_lte=${todayStr}`;
   let pages = 0;
   while (nextUrl && pages < 30) {
     const data: PaginatedResponse<GoTeamUpEvent> = await goteamupFetch(nextUrl, token);
-    all.push(...data.results);
+    for (const ev of data.results) {
+      // Belt-and-suspenders: skip any event that starts in the future
+      // (in case starts_at_lte is ignored by the API)
+      const evDate = ev.starts_at?.split("T")[0];
+      if (evDate && evDate <= todayStr) {
+        all.push(ev);
+      }
+    }
     nextUrl = data.next || null;
     pages++;
   }
@@ -160,6 +168,17 @@ export async function syncTeamup(): Promise<{ clientsUpdated: number; attendance
   const cutoffStr = cutoffDate.toISOString().split("T")[0];
 
   try {
+    // 0. Purge any attendance records with dates in the future — these are
+    //    advance registrations that slipped through without an upper-bound filter.
+    const todayStr = new Date().toISOString().split("T")[0];
+    const deleted = await db
+      .delete(attendanceRecordsTable)
+      .where(gt(attendanceRecordsTable.date, todayStr))
+      .returning({ id: attendanceRecordsTable.id });
+    if (deleted.length > 0) {
+      logger.info({ count: deleted.length }, "GoTeamUp: purged future-dated attendance records");
+    }
+
     // 1. Fetch active customer IDs (only those with active memberships)
     logger.info("GoTeamUp: fetching active customer IDs...");
     const activeIds = await fetchActiveCustomerIds(token);

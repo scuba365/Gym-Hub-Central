@@ -16,16 +16,20 @@ description: Working filter params, pagination gotchas, and active-member strate
 
 ## Event date filtering
 - `?starts_at_gte=YYYY-MM-DD` — **works correctly** (confirmed: 1,818 events for last 28 days)
+- `?starts_at_lte=YYYY-MM-DD` — **add this as an upper bound capped to TODAY**. Without it, GoTeamUp returns future recurring-class instances (the gym books sessions weeks in advance). This causes attendance records to be stored with future dates, which fall outside the chart window.
 - `?start_date=`, `?from_date=`, `?from=`, `?date_from=` — all **ignored** (still return 21,444 total)
 - `?ordering=-starts_at` — **ignored** (events sorted by template ID, not date)
 
-**Why:** Events are sorted by their recurring-series ID, not chronologically. The "last page" is not the most recent events.
+**Why:** Events are sorted by their recurring-series ID, not chronologically. The "last page" is not the most recent events. Without `starts_at_lte=TODAY`, the API returns advance-booked future sessions alongside past ones.
+
+**How to apply:** Always use BOTH `starts_at_gte` and `starts_at_lte=TODAY`. Also add a code-level guard: skip any event where `ev.starts_at.split("T")[0] > todayStr` (belt-and-suspenders in case the API param is ignored).
 
 ## Attendance filtering
 - `?customer=<id>` — **works** (returns all attendances for that customer; 813+ records per active member)
 - `?event=<id>` — **works** (returns all attendances for a specific event)
 - `?ordering=-id` — **works** on the attendances endpoint (newest bookings first)
 - `?ordering=-id` applied per customer with early-stop (2 consecutive empty pages) gives recent attendance efficiently
+- Status `"not_registered"` is filtered out. Status `"registered"` (future bookings) is included — but since events are now capped to today, future registrations won't appear.
 
 ## Pagination
 - The `next` field in paginated responses is a **full URL** (e.g. `https://goteamup.com/api/v2/customers?page=2&page_size=100`).
