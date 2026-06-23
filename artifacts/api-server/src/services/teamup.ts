@@ -132,6 +132,7 @@ export async function syncTeamup(): Promise<{ clientsUpdated: number; attendance
     await recalculateAttendanceAverages();
   } catch (err) {
     logger.error({ err }, "TeamUp sync error");
+    throw err;
   }
 
   return { clientsUpdated, attendanceAdded };

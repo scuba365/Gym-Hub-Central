@@ -159,6 +159,7 @@ export async function syncTrainerize(): Promise<{ clientsUpdated: number; sessio
     }
   } catch (err) {
     logger.error({ err }, "Trainerize sync error");
+    throw err;
   }
 
   return { clientsUpdated, sessionsAdded };

@@ -17,16 +17,26 @@ export function SyncButton({ lastSyncedAt }: { lastSyncedAt?: string | null }) {
         queryClient.invalidateQueries({ queryKey: getGetDashboardStatsQueryKey() });
         queryClient.invalidateQueries({ queryKey: getListClientsQueryKey() });
         
-        if (result.success) {
-          toast({
-            title: "Sync Complete",
-            description: `${result.clientsUpdated} clients, ${result.scansAdded} scans, ${result.attendanceRecordsAdded} attendances updated.`,
-          });
-        } else {
+        if (result.errors && result.errors.length > 0) {
           toast({
             variant: "destructive",
-            title: "Partial Sync",
-            description: `Issues with: ${result.missingSources?.join(", ") || "Unknown"}. Check configuration.`,
+            title: result.success ? "Sync Complete (with errors)" : "Partial Sync",
+            description: result.errors.join(" | "),
+          });
+        } else if (result.missingSources && result.missingSources.length > 0 && (result.configuredSources?.length ?? 0) === 0) {
+          toast({
+            variant: "destructive",
+            title: "No Sources Configured",
+            description: `Missing credentials for: ${result.missingSources.join(", ")}. Add API keys in settings.`,
+          });
+        } else {
+          const parts = [];
+          if (result.clientsUpdated) parts.push(`${result.clientsUpdated} clients`);
+          if (result.scansAdded) parts.push(`${result.scansAdded} scans`);
+          if (result.attendanceRecordsAdded) parts.push(`${result.attendanceRecordsAdded} attendance records`);
+          toast({
+            title: "Sync Complete",
+            description: parts.length > 0 ? `Updated: ${parts.join(", ")}.` : "All sources up to date.",
           });
         }
       },

@@ -147,6 +147,7 @@ export async function syncInBody(): Promise<{ scansAdded: number }> {
     await refreshLatestScanData();
   } catch (err) {
     logger.error({ err }, "InBody sync error");
+    throw err;
   }
 
   return { scansAdded };
