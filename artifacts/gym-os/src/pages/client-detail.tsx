@@ -21,7 +21,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
-import { format, parseISO, subDays, eachDayOfInterval } from "date-fns";
+import { format, parseISO, subDays } from "date-fns";
 import { 
   ArrowLeft, 
   Save, 
@@ -34,13 +34,17 @@ import {
 import { 
   LineChart, 
   Line, 
+  BarChart,
+  Bar,
   XAxis, 
   YAxis, 
   CartesianGrid, 
   Tooltip as RechartsTooltip, 
   ResponsiveContainer,
-  Legend
+  Legend,
+  Cell
 } from "recharts";
+import { startOfWeek, endOfWeek, isWithinInterval } from "date-fns";
 
 export default function ClientDetail() {
   const params = useParams();
@@ -102,7 +106,7 @@ export default function ClientDetail() {
     return name.split(" ").map(n => n[0]).join("").toUpperCase().substring(0, 2);
   };
 
-  // Chart data formatting
+  // InBody chart data
   const chartData = useMemo(() => {
     if (!scans || scans.length === 0) return [];
     return [...scans]
@@ -114,6 +118,26 @@ export default function ClientDetail() {
         muscle: s.muscleMassKg
       }));
   }, [scans]);
+
+  // Weekly attendance chart data (last 4 weeks)
+  const weeklyAttendanceData = useMemo(() => {
+    const today = new Date();
+    return Array.from({ length: 4 }, (_, i) => {
+      const weekOffset = 3 - i;
+      const weekStart = startOfWeek(subDays(today, weekOffset * 7), { weekStartsOn: 1 });
+      const weekEnd = endOfWeek(weekStart, { weekStartsOn: 1 });
+      const label = i === 3 ? "This week" : i === 2 ? "Last week" : `${weekOffset}w ago`;
+      const count = (attendance || []).filter(r => {
+        if (!r.date) return false;
+        try {
+          return isWithinInterval(parseISO(r.date), { start: weekStart, end: weekEnd });
+        } catch {
+          return false;
+        }
+      }).length;
+      return { week: label, sessions: count, weekStart };
+    });
+  }, [attendance]);
 
   if (clientLoading) {
     return (
@@ -315,17 +339,39 @@ export default function ClientDetail() {
             </CardContent>
           </Card>
 
-          <Card className="bg-card border-border shadow-md">
+          <Card className="bg-card border-border shadow-md h-[280px] flex flex-col">
             <CardHeader className="pb-3 border-b border-border/50">
-              <CardTitle className="text-sm font-display uppercase tracking-wider text-muted-foreground flex items-center">
-                <Calendar className="mr-2 h-4 w-4" /> 90-Day Attendance Heatmap
-              </CardTitle>
+              <div className="flex justify-between items-center">
+                <CardTitle className="text-sm font-display uppercase tracking-wider text-muted-foreground flex items-center">
+                  <Calendar className="mr-2 h-4 w-4" /> Weekly Attendance
+                </CardTitle>
+                <span className="text-xs font-mono text-muted-foreground">Last 4 weeks</span>
+              </div>
             </CardHeader>
-            <CardContent className="pt-6">
+            <CardContent className="pt-4 flex-1 min-h-0">
               {attendanceLoading ? (
-                <Skeleton className="h-32 w-full" />
+                <Skeleton className="h-full w-full" />
               ) : (
-                <AttendanceHeatmap records={attendance || []} />
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={weeklyAttendanceData} margin={{ top: 4, right: 16, bottom: 4, left: -16 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
+                    <XAxis dataKey="week" stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} />
+                    <YAxis allowDecimals={false} stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} />
+                    <RechartsTooltip
+                      cursor={{ fill: "hsl(var(--muted))", opacity: 0.4 }}
+                      contentStyle={{ backgroundColor: "hsl(var(--card))", borderColor: "hsl(var(--border))", color: "hsl(var(--foreground))" }}
+                      formatter={(value: number) => [`${value} session${value !== 1 ? "s" : ""}`, "Attendance"]}
+                    />
+                    <Bar dataKey="sessions" radius={[4, 4, 0, 0]} maxBarSize={56}>
+                      {weeklyAttendanceData.map((entry, index) => (
+                        <Cell
+                          key={`cell-${index}`}
+                          fill={index === 3 ? "hsl(var(--primary))" : "hsl(var(--primary) / 0.45)"}
+                        />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
               )}
             </CardContent>
           </Card>
@@ -336,42 +382,3 @@ export default function ClientDetail() {
   );
 }
 
-// Simple internal heatmap component
-function AttendanceHeatmap({ records }: { records: any[] }) {
-  const endDate = new Date();
-  const startDate = subDays(endDate, 89);
-  
-  const days = eachDayOfInterval({ start: startDate, end: endDate });
-  
-  // Create lookup map for faster checking
-  const attendanceMap = new Set();
-  records.forEach(r => {
-    if (r.date) {
-      attendanceMap.add(format(parseISO(r.date), "yyyy-MM-dd"));
-    }
-  });
-
-  return (
-    <div className="w-full overflow-x-auto pb-2">
-      <div className="min-w-[600px]">
-        <div className="grid grid-rows-7 gap-1" style={{ gridAutoFlow: 'column' }}>
-          {days.map((day, i) => {
-            const dateStr = format(day, "yyyy-MM-dd");
-            const attended = attendanceMap.has(dateStr);
-            return (
-              <div 
-                key={dateStr}
-                className={`w-3 h-3 rounded-sm ${attended ? 'bg-primary' : 'bg-secondary'}`}
-                title={`${format(day, "MMM d, yyyy")}${attended ? ' - Attended' : ''}`}
-              />
-            );
-          })}
-        </div>
-        <div className="flex justify-between mt-3 text-[10px] uppercase font-mono text-muted-foreground">
-          <span>90 days ago</span>
-          <span>Today</span>
-        </div>
-      </div>
-    </div>
-  );
-}
