@@ -3,13 +3,20 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: Gym OS API — unified client data from TeamUp, Trainerize, and InBody
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: clients
+    description: Client management
+  - name: sync
+    description: Data synchronization from external platforms
+  - name: dashboard
+    description: Dashboard summary data
+
 paths:
   /healthz:
     get:
@@ -24,6 +31,158 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /clients:
+    get:
+      operationId: listClients
+      tags: [clients]
+      summary: List all clients with summary data
+      parameters:
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: engagementStatus
+          in: query
+          schema:
+            type: string
+            enum: [active, at_risk, disengaged]
+        - name: needsMealPlan
+          in: query
+          schema:
+            type: boolean
+      responses:
+        "200":
+          description: List of clients
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ClientSummary"
+
+  /clients/{id}:
+    get:
+      operationId: getClient
+      tags: [clients]
+      summary: Get full client detail
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Client detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClientDetail"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    put:
+      operationId: updateClient
+      tags: [clients]
+      summary: Update editable client fields
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ClientUpdate"
+      responses:
+        "200":
+          description: Updated client
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClientSummary"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /clients/{id}/scans:
+    get:
+      operationId: getClientScans
+      tags: [clients]
+      summary: Get InBody scan history for a client
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Scan history
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/InBodyScan"
+
+  /clients/{id}/attendance:
+    get:
+      operationId: getClientAttendance
+      tags: [clients]
+      summary: Get attendance records for a client
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Attendance records
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AttendanceRecord"
+
+  /sync:
+    post:
+      operationId: syncAll
+      tags: [sync]
+      summary: Trigger full data sync from TeamUp, Trainerize, and InBody
+      responses:
+        "200":
+          description: Sync result summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SyncResult"
+
+  /dashboard/stats:
+    get:
+      operationId: getDashboardStats
+      tags: [dashboard]
+      summary: Get dashboard summary statistics
+      responses:
+        "200":
+          description: Dashboard stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardStats"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +193,237 @@ components:
       required:
         - status
 
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
+
+    ClientSummary:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        email:
+          type: ["string", "null"]
+        photoUrl:
+          type: ["string", "null"]
+        goals:
+          type: ["string", "null"]
+        needsMealPlan:
+          type: boolean
+        notes:
+          type: ["string", "null"]
+        engagementStatus:
+          type: string
+          enum: [active, at_risk, disengaged, unknown]
+        weeklyAttendanceAvg:
+          type: ["number", "null"]
+        lastAttendanceDate:
+          type: ["string", "null"]
+        lastTrainingDate:
+          type: ["string", "null"]
+        workoutCompliancePct:
+          type: ["number", "null"]
+        latestScanDate:
+          type: ["string", "null"]
+        latestWeight:
+          type: ["number", "null"]
+        latestBodyFatPct:
+          type: ["number", "null"]
+        latestMuscleMass:
+          type: ["number", "null"]
+        lastSyncedAt:
+          type: ["string", "null"]
+        teamupId:
+          type: ["string", "null"]
+        trainerizeId:
+          type: ["string", "null"]
+        inbodyId:
+          type: ["string", "null"]
+      required:
+        - id
+        - name
+        - needsMealPlan
+        - engagementStatus
+
+    ClientDetail:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        email:
+          type: ["string", "null"]
+        photoUrl:
+          type: ["string", "null"]
+        goals:
+          type: ["string", "null"]
+        needsMealPlan:
+          type: boolean
+        notes:
+          type: ["string", "null"]
+        engagementStatus:
+          type: string
+          enum: [active, at_risk, disengaged, unknown]
+        weeklyAttendanceAvg:
+          type: ["number", "null"]
+        lastAttendanceDate:
+          type: ["string", "null"]
+        lastTrainingDate:
+          type: ["string", "null"]
+        workoutCompliancePct:
+          type: ["number", "null"]
+        latestScanDate:
+          type: ["string", "null"]
+        latestWeight:
+          type: ["number", "null"]
+        latestBodyFatPct:
+          type: ["number", "null"]
+        latestMuscleMass:
+          type: ["number", "null"]
+        lastSyncedAt:
+          type: ["string", "null"]
+        teamupId:
+          type: ["string", "null"]
+        trainerizeId:
+          type: ["string", "null"]
+        inbodyId:
+          type: ["string", "null"]
+        recentScans:
+          type: array
+          items:
+            $ref: "#/components/schemas/InBodyScan"
+        recentAttendance:
+          type: array
+          items:
+            $ref: "#/components/schemas/AttendanceRecord"
+      required:
+        - id
+        - name
+        - needsMealPlan
+        - engagementStatus
+        - recentScans
+        - recentAttendance
+
+    ClientUpdate:
+      type: object
+      properties:
+        goals:
+          type: ["string", "null"]
+        needsMealPlan:
+          type: boolean
+        notes:
+          type: ["string", "null"]
+
+    InBodyScan:
+      type: object
+      properties:
+        id:
+          type: integer
+        clientId:
+          type: integer
+        scannedAt:
+          type: string
+        weightKg:
+          type: ["number", "null"]
+        bodyFatPct:
+          type: ["number", "null"]
+        muscleMassKg:
+          type: ["number", "null"]
+        bmr:
+          type: ["number", "null"]
+        visceralFatLevel:
+          type: ["number", "null"]
+        bmi:
+          type: ["number", "null"]
+        totalBodyWaterKg:
+          type: ["number", "null"]
+      required:
+        - id
+        - clientId
+        - scannedAt
+
+    AttendanceRecord:
+      type: object
+      properties:
+        id:
+          type: integer
+        clientId:
+          type: integer
+        date:
+          type: string
+        className:
+          type: ["string", "null"]
+      required:
+        - id
+        - clientId
+        - date
+
+    SyncResult:
+      type: object
+      properties:
+        success:
+          type: boolean
+        clientsUpdated:
+          type: integer
+        attendanceRecordsAdded:
+          type: integer
+        trainingSessionsAdded:
+          type: integer
+        scansAdded:
+          type: integer
+        syncedAt:
+          type: string
+        errors:
+          type: array
+          items:
+            type: string
+        configuredSources:
+          type: array
+          items:
+            type: string
+        missingSources:
+          type: array
+          items:
+            type: string
+      required:
+        - success
+        - clientsUpdated
+        - attendanceRecordsAdded
+        - trainingSessionsAdded
+        - scansAdded
+        - syncedAt
+        - errors
+        - configuredSources
+        - missingSources
+
+    DashboardStats:
+      type: object
+      properties:
+        totalClients:
+          type: integer
+        activeClients:
+          type: integer
+        atRiskClients:
+          type: integer
+        disengagedClients:
+          type: integer
+        needsMealPlanCount:
+          type: integer
+        overdueInBodyCount:
+          type: integer
+        lastSyncedAt:
+          type: ["string", "null"]
+      required:
+        - totalClients
+        - activeClients
+        - atRiskClients
+        - disengagedClients
+        - needsMealPlanCount
+        - overdueInBodyCount
