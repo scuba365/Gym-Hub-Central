@@ -119,10 +119,10 @@ export default function ClientDetail() {
       }));
   }, [scans]);
 
-  // Weekly attendance chart data (last 4 weeks)
+  // Weekly attendance chart data (last 4 weeks) with drop detection
   const weeklyAttendanceData = useMemo(() => {
     const today = new Date();
-    return Array.from({ length: 4 }, (_, i) => {
+    const weeks = Array.from({ length: 4 }, (_, i) => {
       const weekOffset = 3 - i;
       const weekStart = startOfWeek(subDays(today, weekOffset * 7), { weekStartsOn: 1 });
       const weekEnd = endOfWeek(weekStart, { weekStartsOn: 1 });
@@ -137,7 +137,34 @@ export default function ClientDetail() {
       }).length;
       return { week: label, sessions: count, weekStart };
     });
+
+    const avg = weeks.reduce((sum, w) => sum + w.sessions, 0) / weeks.length;
+
+    return weeks.map(w => {
+      const dropPct = avg > 0 ? Math.round(((avg - w.sessions) / avg) * 100) : 0;
+      // Flag as a drop week if avg is meaningful (>=1) and this week is 40%+ below avg
+      const isDropWeek = avg >= 1 && w.sessions < avg * 0.6;
+      return { ...w, avg, dropPct: Math.max(0, dropPct), isDropWeek };
+    });
   }, [attendance]);
+
+  // Custom tooltip for the attendance bar chart
+  const AttendanceTooltip = ({ active, payload, label }: { active?: boolean; payload?: Array<{ payload: typeof weeklyAttendanceData[0] }>; label?: string }) => {
+    if (!active || !payload || !payload.length) return null;
+    const entry = payload[0].payload;
+    return (
+      <div className="rounded border px-3 py-2 text-xs font-mono shadow-md"
+        style={{ backgroundColor: "hsl(var(--card))", borderColor: "hsl(var(--border))", color: "hsl(var(--foreground))" }}>
+        <p className="font-bold mb-1">{label}</p>
+        <p>{entry.sessions} session{entry.sessions !== 1 ? "s" : ""}</p>
+        {entry.isDropWeek && (
+          <p className="mt-1 font-semibold" style={{ color: "#f59e0b" }}>
+            ▼ {entry.dropPct}% below 4-week avg
+          </p>
+        )}
+      </div>
+    );
+  };
 
   if (clientLoading) {
     return (
@@ -359,14 +386,19 @@ export default function ClientDetail() {
                     <YAxis allowDecimals={false} stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} />
                     <RechartsTooltip
                       cursor={{ fill: "hsl(var(--muted))", opacity: 0.4 }}
-                      contentStyle={{ backgroundColor: "hsl(var(--card))", borderColor: "hsl(var(--border))", color: "hsl(var(--foreground))" }}
-                      formatter={(value: number) => [`${value} session${value !== 1 ? "s" : ""}`, "Attendance"]}
+                      content={<AttendanceTooltip />}
                     />
                     <Bar dataKey="sessions" radius={[4, 4, 0, 0]} maxBarSize={56}>
                       {weeklyAttendanceData.map((entry, index) => (
                         <Cell
                           key={`cell-${index}`}
-                          fill={index === 3 ? "hsl(var(--primary))" : "hsl(var(--primary) / 0.45)"}
+                          fill={
+                            entry.isDropWeek
+                              ? "#f59e0b"
+                              : index === 3
+                              ? "hsl(var(--primary))"
+                              : "hsl(var(--primary) / 0.45)"
+                          }
                         />
                       ))}
                     </Bar>
