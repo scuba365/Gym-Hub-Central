@@ -67,12 +67,17 @@ router.post("/sync", async (req, res) => {
     missingSources.push("Trainerize");
   }
 
-  // InBody is webhook-based (push), not polled.
-  // Mark configured only when INBODY_WEBHOOK_SECRET is set (required for auth).
+  // LookinBody pull sync — fetches scans for all clients with a phone number.
+  // Webhook path (INBODY_WEBHOOK_SECRET) also remains active as a fallback.
+  if (process.env.LOOKINBODY_API_KEY && process.env.LOOKINBODY_ACCOUNT_NAME) {
+    configuredSources.push("LookinBody (pull)");
+  } else {
+    missingSources.push(
+      "LookinBody (pull — set LOOKINBODY_API_KEY and LOOKINBODY_ACCOUNT_NAME)"
+    );
+  }
   if (process.env.INBODY_WEBHOOK_SECRET) {
     configuredSources.push("InBody (webhook)");
-  } else {
-    missingSources.push("InBody (webhook — set INBODY_WEBHOOK_SECRET)");
   }
 
   const errors: string[] = [];
