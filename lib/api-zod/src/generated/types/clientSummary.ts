@@ -44,4 +44,20 @@ export interface ClientSummary {
   trainerizeId?: string | null;
   /** @nullable */
   inbodyId?: string | null;
+  /** @nullable */
+  dailyCalorieTarget?: number | null;
+  /** @nullable */
+  proteinTargetG?: number | null;
+  /** @nullable */
+  carbsTargetG?: number | null;
+  /** @nullable */
+  fatTargetG?: number | null;
+  /** @nullable */
+  macroTargetsUpdatedAt?: string | null;
+  /** @nullable */
+  macroTargetsRationale?: string | null;
+  /** @nullable */
+  lastAiInsight?: string | null;
+  /** @nullable */
+  lastAiInsightAt?: string | null;
 }

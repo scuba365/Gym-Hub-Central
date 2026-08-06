@@ -60,6 +60,22 @@ export interface ClientSummary {
   trainerizeId?: string | null;
   /** @nullable */
   inbodyId?: string | null;
+  /** @nullable */
+  dailyCalorieTarget?: number | null;
+  /** @nullable */
+  proteinTargetG?: number | null;
+  /** @nullable */
+  carbsTargetG?: number | null;
+  /** @nullable */
+  fatTargetG?: number | null;
+  /** @nullable */
+  macroTargetsUpdatedAt?: string | null;
+  /** @nullable */
+  macroTargetsRationale?: string | null;
+  /** @nullable */
+  lastAiInsight?: string | null;
+  /** @nullable */
+  lastAiInsightAt?: string | null;
 }
 
 export type ClientDetailEngagementStatus = typeof ClientDetailEngagementStatus[keyof typeof ClientDetailEngagementStatus];
@@ -137,6 +153,22 @@ export interface ClientDetail {
   trainerizeId?: string | null;
   /** @nullable */
   inbodyId?: string | null;
+  /** @nullable */
+  dailyCalorieTarget?: number | null;
+  /** @nullable */
+  proteinTargetG?: number | null;
+  /** @nullable */
+  carbsTargetG?: number | null;
+  /** @nullable */
+  fatTargetG?: number | null;
+  /** @nullable */
+  macroTargetsUpdatedAt?: string | null;
+  /** @nullable */
+  macroTargetsRationale?: string | null;
+  /** @nullable */
+  lastAiInsight?: string | null;
+  /** @nullable */
+  lastAiInsightAt?: string | null;
   recentScans: InBodyScan[];
   recentAttendance: AttendanceRecord[];
 }
@@ -147,6 +179,53 @@ export interface ClientUpdate {
   needsMealPlan?: boolean;
   /** @nullable */
   notes?: string | null;
+}
+
+export interface MacroUpdate {
+  /** @nullable */
+  dailyCalorieTarget?: number | null;
+  /** @nullable */
+  proteinTargetG?: number | null;
+  /** @nullable */
+  carbsTargetG?: number | null;
+  /** @nullable */
+  fatTargetG?: number | null;
+}
+
+export type CheckinDraftUpdateStatus = typeof CheckinDraftUpdateStatus[keyof typeof CheckinDraftUpdateStatus];
+
+
+export const CheckinDraftUpdateStatus = {
+  draft: 'draft',
+  sent: 'sent',
+  dismissed: 'dismissed',
+} as const;
+
+export interface CheckinDraftUpdate {
+  status: CheckinDraftUpdateStatus;
+}
+
+export interface AiInsight {
+  insight: string;
+  generatedAt: string;
+}
+
+export type CheckinDraftStatus = typeof CheckinDraftStatus[keyof typeof CheckinDraftStatus];
+
+
+export const CheckinDraftStatus = {
+  draft: 'draft',
+  sent: 'sent',
+  dismissed: 'dismissed',
+} as const;
+
+export interface CheckinDraft {
+  id: number;
+  clientId: number;
+  draftText: string;
+  status: CheckinDraftStatus;
+  /** @nullable */
+  createdAt?: string | null;
 }
 
 export interface SyncResult {

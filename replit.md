@@ -24,6 +24,7 @@ These must be set in Replit Secrets before Sync will pull real data:
 | `TRAINERIZE_ACCOUNT_ID` | Your Trainerize account/gym ID |
 | `INBODY_API_KEY` | InBody cloud API key |
 | `INBODY_BASE_URL` | InBody API base URL (optional, defaults to `https://onus.inbody.com/api/v1`) |
+| `ANTHROPIC_API_KEY` | Anthropic API key — required for AI Insight, Check-in Draft, and Macro Target generation |
 
 ## Stack
 

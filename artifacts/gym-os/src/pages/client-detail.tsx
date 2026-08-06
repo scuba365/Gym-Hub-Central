@@ -1,14 +1,21 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import { useParams, Link } from "wouter";
-import { 
-  useGetClient, 
-  useGetClientScans, 
-  useGetClientAttendance, 
+import {
+  useGetClient,
+  useGetClientScans,
+  useGetClientAttendance,
   useUpdateClient,
+  useGenerateClientInsight,
+  useGenerateCheckinDraft,
+  useListCheckinDrafts,
+  useUpdateCheckinDraft,
+  useGenerateMacroTargets,
+  useUpdateClientMacros,
   getGetClientQueryKey,
   getGetClientScansQueryKey,
   getGetClientAttendanceQueryKey,
-  getListClientsQueryKey
+  getListClientsQueryKey,
+  getListCheckinDraftsQueryKey,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,24 +29,28 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { format, parseISO, subDays } from "date-fns";
-import { 
-  ArrowLeft, 
-  Save, 
-  Activity, 
-  Dumbbell, 
+import {
+  ArrowLeft,
+  Save,
+  Activity,
+  Dumbbell,
   Utensils,
   Scale,
-  Calendar
+  Calendar,
+  Sparkles,
+  MessageSquare,
+  Copy,
+  Check,
 } from "lucide-react";
-import { 
-  LineChart, 
-  Line, 
+import {
+  LineChart,
+  Line,
   BarChart,
   Bar,
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip as RechartsTooltip, 
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip as RechartsTooltip,
   ResponsiveContainer,
   Legend,
   Cell
@@ -52,25 +63,44 @@ export default function ClientDetail() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const { data: client, isLoading: clientLoading } = useGetClient(id, { 
-    query: { enabled: !!id, queryKey: getGetClientQueryKey(id) } 
+  const { data: client, isLoading: clientLoading } = useGetClient(id, {
+    query: { enabled: !!id, queryKey: getGetClientQueryKey(id) }
   });
-  
-  const { data: scans, isLoading: scansLoading } = useGetClientScans(id, { 
-    query: { enabled: !!id, queryKey: getGetClientScansQueryKey(id) } 
+
+  const { data: scans, isLoading: scansLoading } = useGetClientScans(id, {
+    query: { enabled: !!id, queryKey: getGetClientScansQueryKey(id) }
   });
-  
-  const { data: attendance, isLoading: attendanceLoading } = useGetClientAttendance(id, { 
-    query: { enabled: !!id, queryKey: getGetClientAttendanceQueryKey(id) } 
+
+  const { data: attendance, isLoading: attendanceLoading } = useGetClientAttendance(id, {
+    query: { enabled: !!id, queryKey: getGetClientAttendanceQueryKey(id) }
+  });
+
+  const { data: checkinDrafts, isLoading: draftsLoading } = useListCheckinDrafts(id, {
+    query: { enabled: !!id, queryKey: getListCheckinDraftsQueryKey(id) },
   });
 
   const updateMutation = useUpdateClient();
+  const insightMutation = useGenerateClientInsight();
+  const checkinMutation = useGenerateCheckinDraft();
+  const updateDraftMutation = useUpdateCheckinDraft();
+  const macroAiMutation = useGenerateMacroTargets();
+  const macroManualMutation = useUpdateClientMacros();
 
   // Local state for editable fields
   const [goals, setGoals] = useState("");
   const [notes, setNotes] = useState("");
   const [needsMealPlan, setNeedsMealPlan] = useState(false);
   const initialized = useRef(false);
+
+  // Macro local state
+  const [calories, setCalories] = useState("");
+  const [protein, setProtein] = useState("");
+  const [carbs, setCarbs] = useState("");
+  const [fat, setFat] = useState("");
+  const macrosInitialized = useRef(false);
+
+  // Copy state per draft
+  const [copiedDraftId, setCopiedDraftId] = useState<number | null>(null);
 
   useEffect(() => {
     if (client && !initialized.current) {
@@ -81,14 +111,20 @@ export default function ClientDetail() {
     }
   }, [client]);
 
+  useEffect(() => {
+    if (client && !macrosInitialized.current) {
+      setCalories(client.dailyCalorieTarget != null ? String(Math.round(client.dailyCalorieTarget)) : "");
+      setProtein(client.proteinTargetG != null ? String(Math.round(client.proteinTargetG)) : "");
+      setCarbs(client.carbsTargetG != null ? String(Math.round(client.carbsTargetG)) : "");
+      setFat(client.fatTargetG != null ? String(Math.round(client.fatTargetG)) : "");
+      macrosInitialized.current = true;
+    }
+  }, [client]);
+
   const handleSave = () => {
     updateMutation.mutate({
       id,
-      data: {
-        goals,
-        notes,
-        needsMealPlan
-      }
+      data: { goals, notes, needsMealPlan }
     }, {
       onSuccess: () => {
         toast({ title: "Client Updated", description: "Changes saved successfully." });
@@ -98,6 +134,91 @@ export default function ClientDetail() {
       onError: () => {
         toast({ variant: "destructive", title: "Error", description: "Failed to save changes." });
       }
+    });
+  };
+
+  const handleGenerateInsight = () => {
+    insightMutation.mutate({ id }, {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: getGetClientQueryKey(id) });
+        toast({ title: "Insight generated" });
+      },
+      onError: (err: unknown) => {
+        const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error || "Failed to generate insight";
+        toast({ variant: "destructive", title: "Error", description: msg });
+      },
+    });
+  };
+
+  const handleGenerateCheckin = () => {
+    checkinMutation.mutate({ id }, {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: getListCheckinDraftsQueryKey(id) });
+        toast({ title: "Check-in draft created" });
+      },
+      onError: (err: unknown) => {
+        const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error || "Failed to generate draft";
+        toast({ variant: "destructive", title: "Error", description: msg });
+      },
+    });
+  };
+
+  const handleDraftStatus = (draftId: number, status: "sent" | "dismissed") => {
+    updateDraftMutation.mutate(
+      { id, draftId, data: { status } },
+      {
+        onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: getListCheckinDraftsQueryKey(id) });
+        },
+        onError: () => {
+          toast({ variant: "destructive", title: "Error", description: "Failed to update draft." });
+        },
+      }
+    );
+  };
+
+  const handleCopyDraft = (text: string, draftId: number) => {
+    void navigator.clipboard.writeText(text).then(() => {
+      setCopiedDraftId(draftId);
+      setTimeout(() => setCopiedDraftId(null), 2000);
+    });
+  };
+
+  const handleSuggestMacros = () => {
+    macroAiMutation.mutate({ id }, {
+      onSuccess: (data) => {
+        setCalories(data.dailyCalorieTarget != null ? String(Math.round(data.dailyCalorieTarget)) : "");
+        setProtein(data.proteinTargetG != null ? String(Math.round(data.proteinTargetG)) : "");
+        setCarbs(data.carbsTargetG != null ? String(Math.round(data.carbsTargetG)) : "");
+        setFat(data.fatTargetG != null ? String(Math.round(data.fatTargetG)) : "");
+        queryClient.invalidateQueries({ queryKey: getGetClientQueryKey(id) });
+        toast({ title: "Macro targets suggested" });
+      },
+      onError: (err: unknown) => {
+        const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error || "Failed to suggest macros";
+        toast({ variant: "destructive", title: "Error", description: msg });
+      },
+    });
+  };
+
+  const handleSaveMacros = () => {
+    macroManualMutation.mutate({
+      id,
+      data: {
+        dailyCalorieTarget: calories ? Number(calories) : null,
+        proteinTargetG: protein ? Number(protein) : null,
+        carbsTargetG: carbs ? Number(carbs) : null,
+        fatTargetG: fat ? Number(fat) : null,
+      },
+    }, {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: getGetClientQueryKey(id) });
+        queryClient.invalidateQueries({ queryKey: getListClientsQueryKey() });
+        toast({ title: "Macro targets saved" });
+      },
+      onError: () => {
+        toast({ variant: "destructive", title: "Error", description: "Failed to save macros." });
+      },
     });
   };
 
@@ -142,13 +263,11 @@ export default function ClientDetail() {
 
     return weeks.map(w => {
       const dropPct = avg > 0 ? Math.round(((avg - w.sessions) / avg) * 100) : 0;
-      // Flag as a drop week if avg is meaningful (>=1) and this week is 40%+ below avg
       const isDropWeek = avg >= 1 && w.sessions < avg * 0.6;
       return { ...w, avg, dropPct: Math.max(0, dropPct), isDropWeek };
     });
   }, [attendance]);
 
-  // Custom tooltip for the attendance bar chart
   const AttendanceTooltip = ({ active, payload, label }: { active?: boolean; payload?: Array<{ payload: typeof weeklyAttendanceData[0] }>; label?: string }) => {
     if (!active || !payload || !payload.length) return null;
     const entry = payload[0].payload;
@@ -164,6 +283,12 @@ export default function ClientDetail() {
         )}
       </div>
     );
+  };
+
+  const draftStatusColor: Record<string, string> = {
+    draft: "bg-muted text-muted-foreground",
+    sent: "bg-primary/20 text-primary border-primary/30",
+    dismissed: "bg-destructive/10 text-destructive border-destructive/30",
   };
 
   if (clientLoading) {
@@ -191,6 +316,7 @@ export default function ClientDetail() {
   }
 
   const isDisengaged = client.engagementStatus === "disengaged";
+  const hasScans = scans && scans.length > 0;
 
   return (
     <div className="container mx-auto p-4 max-w-6xl pb-20">
@@ -222,7 +348,7 @@ export default function ClientDetail() {
             </div>
           </div>
         </div>
-        
+
         <div className="flex gap-4">
           <Card className="bg-card/50 border-border/50">
             <CardContent className="p-3 px-6 text-center">
@@ -240,8 +366,8 @@ export default function ClientDetail() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        
-        {/* Left Column - Editable Settings */}
+
+        {/* Left Column - Editable Settings + AI cards */}
         <div className="space-y-6">
           <Card className="bg-card border-border shadow-md">
             <CardHeader className="pb-3 border-b border-border/50">
@@ -252,19 +378,19 @@ export default function ClientDetail() {
             <CardContent className="pt-4 space-y-4">
               <div className="flex items-center justify-between">
                 <Label htmlFor="meal-plan" className="font-mono text-xs uppercase cursor-pointer">Requires Meal Plan</Label>
-                <Switch 
-                  id="meal-plan" 
-                  checked={needsMealPlan} 
-                  onCheckedChange={setNeedsMealPlan} 
+                <Switch
+                  id="meal-plan"
+                  checked={needsMealPlan}
+                  onCheckedChange={setNeedsMealPlan}
                 />
               </div>
 
               <div className="space-y-2 pt-2">
                 <Label htmlFor="goals" className="font-mono text-xs uppercase">Primary Goals</Label>
-                <Textarea 
-                  id="goals" 
-                  value={goals} 
-                  onChange={(e) => setGoals(e.target.value)} 
+                <Textarea
+                  id="goals"
+                  value={goals}
+                  onChange={(e) => setGoals(e.target.value)}
                   className="min-h-[100px] font-mono text-sm bg-background border-border"
                   placeholder="Enter client goals..."
                 />
@@ -272,17 +398,17 @@ export default function ClientDetail() {
 
               <div className="space-y-2 pt-2">
                 <Label htmlFor="notes" className="font-mono text-xs uppercase">Internal Notes</Label>
-                <Textarea 
-                  id="notes" 
-                  value={notes} 
-                  onChange={(e) => setNotes(e.target.value)} 
+                <Textarea
+                  id="notes"
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
                   className="min-h-[120px] font-mono text-sm bg-background border-border"
                   placeholder="Trainer notes (not visible to client)..."
                 />
               </div>
 
-              <Button 
-                onClick={handleSave} 
+              <Button
+                onClick={handleSave}
                 className="w-full mt-4 font-display uppercase font-bold tracking-wider"
                 disabled={updateMutation.isPending}
               >
@@ -292,6 +418,40 @@ export default function ClientDetail() {
             </CardContent>
           </Card>
 
+          {/* AI Insight Card */}
+          <Card className="bg-card border-border shadow-md">
+            <CardHeader className="pb-3 border-b border-border/50">
+              <CardTitle className="text-sm font-display uppercase tracking-wider text-muted-foreground flex items-center">
+                <Sparkles className="mr-2 h-4 w-4" /> AI Insight
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-4 space-y-3">
+              {client.lastAiInsight ? (
+                <div className="space-y-2">
+                  <p className="text-sm text-foreground/90 leading-relaxed">{client.lastAiInsight}</p>
+                  {client.lastAiInsightAt && (
+                    <p className="text-[10px] font-mono text-muted-foreground">
+                      Generated {format(parseISO(client.lastAiInsightAt), "PP p")}
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <p className="text-xs text-muted-foreground italic">No insight generated yet.</p>
+              )}
+              <Button
+                size="sm"
+                variant="outline"
+                className="w-full font-mono text-xs uppercase tracking-wider"
+                onClick={handleGenerateInsight}
+                disabled={insightMutation.isPending}
+              >
+                <Sparkles className="mr-2 h-3 w-3" />
+                {insightMutation.isPending ? "Generating..." : client.lastAiInsight ? "Regenerate Insight" : "Generate Insight"}
+              </Button>
+            </CardContent>
+          </Card>
+
+          {/* Integrations Card */}
           <Card className="bg-card border-border shadow-md">
             <CardHeader className="pb-3 border-b border-border/50">
               <CardTitle className="text-sm font-display uppercase tracking-wider text-muted-foreground flex items-center">
@@ -324,7 +484,7 @@ export default function ClientDetail() {
           </Card>
         </div>
 
-        {/* Right Column - Data & Charts */}
+        {/* Right Column - Data & Charts + AI cards */}
         <div className="lg:col-span-2 space-y-6">
           <Card className="bg-card border-border shadow-md h-[400px] flex flex-col">
             <CardHeader className="pb-3 border-b border-border/50">
@@ -349,7 +509,7 @@ export default function ClientDetail() {
                     <XAxis dataKey="date" stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} />
                     <YAxis yAxisId="left" stroke="hsl(var(--primary))" fontSize={12} tickLine={false} axisLine={false} />
                     <YAxis yAxisId="right" orientation="right" stroke="hsl(var(--chart-2))" fontSize={12} tickLine={false} axisLine={false} />
-                    <RechartsTooltip 
+                    <RechartsTooltip
                       contentStyle={{ backgroundColor: 'hsl(var(--card))', borderColor: 'hsl(var(--border))', color: 'hsl(var(--foreground))' }}
                       itemStyle={{ color: 'hsl(var(--foreground))' }}
                     />
@@ -407,10 +567,182 @@ export default function ClientDetail() {
               )}
             </CardContent>
           </Card>
+
+          {/* Check-in Drafts Card */}
+          <Card className="bg-card border-border shadow-md">
+            <CardHeader className="pb-3 border-b border-border/50">
+              <div className="flex justify-between items-center">
+                <CardTitle className="text-sm font-display uppercase tracking-wider text-muted-foreground flex items-center">
+                  <MessageSquare className="mr-2 h-4 w-4" /> Check-in Drafts
+                </CardTitle>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="font-mono text-xs uppercase tracking-wider h-7 px-3"
+                  onClick={handleGenerateCheckin}
+                  disabled={checkinMutation.isPending}
+                >
+                  <Sparkles className="mr-1 h-3 w-3" />
+                  {checkinMutation.isPending ? "Drafting..." : "Draft Check-in"}
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="pt-4">
+              {draftsLoading ? (
+                <Skeleton className="h-20 w-full" />
+              ) : !checkinDrafts || checkinDrafts.length === 0 ? (
+                <p className="text-xs text-muted-foreground italic text-center py-4">No drafts yet. Click "Draft Check-in" to generate one.</p>
+              ) : (
+                <div className="space-y-3 max-h-72 overflow-y-auto pr-1">
+                  {checkinDrafts.map(draft => (
+                    <div key={draft.id} className="rounded-md border border-border/60 p-3 space-y-2 bg-background/50">
+                      <div className="flex items-center justify-between gap-2">
+                        <Badge
+                          variant="outline"
+                          className={`text-[10px] font-mono uppercase ${draftStatusColor[draft.status] ?? ""}`}
+                        >
+                          {draft.status}
+                        </Badge>
+                        {draft.createdAt && (
+                          <span className="text-[10px] font-mono text-muted-foreground">
+                            {format(parseISO(draft.createdAt), "MMM d, p")}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-foreground/80 leading-relaxed">{draft.draftText}</p>
+                      {draft.status === "draft" && (
+                        <div className="flex gap-2 pt-1">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-6 px-2 text-[10px] font-mono uppercase"
+                            onClick={() => handleCopyDraft(draft.draftText, draft.id)}
+                          >
+                            {copiedDraftId === draft.id ? <Check className="h-3 w-3 mr-1" /> : <Copy className="h-3 w-3 mr-1" />}
+                            {copiedDraftId === draft.id ? "Copied" : "Copy"}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-6 px-2 text-[10px] font-mono uppercase text-primary hover:text-primary"
+                            onClick={() => handleDraftStatus(draft.id, "sent")}
+                            disabled={updateDraftMutation.isPending}
+                          >
+                            Mark Sent
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-6 px-2 text-[10px] font-mono uppercase text-muted-foreground"
+                            onClick={() => handleDraftStatus(draft.id, "dismissed")}
+                            disabled={updateDraftMutation.isPending}
+                          >
+                            Dismiss
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Macro Targets Card */}
+          <Card className="bg-card border-border shadow-md">
+            <CardHeader className="pb-3 border-b border-border/50">
+              <div className="flex justify-between items-center">
+                <CardTitle className="text-sm font-display uppercase tracking-wider text-muted-foreground flex items-center">
+                  <Dumbbell className="mr-2 h-4 w-4" /> Macro Targets
+                </CardTitle>
+                {client.macroTargetsUpdatedAt && (
+                  <span className="text-[10px] font-mono text-muted-foreground">
+                    Updated {format(parseISO(client.macroTargetsUpdatedAt), "PP")}
+                  </span>
+                )}
+              </div>
+            </CardHeader>
+            <CardContent className="pt-4 space-y-4">
+              {!hasScans && (
+                <p className="text-xs text-muted-foreground italic text-center py-2">
+                  Needs an InBody scan first to suggest macros via AI.
+                </p>
+              )}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label className="font-mono text-[10px] uppercase text-muted-foreground">Calories (kcal)</Label>
+                  <Input
+                    type="number"
+                    value={calories}
+                    onChange={e => setCalories(e.target.value)}
+                    className="font-mono text-sm bg-background border-border h-8"
+                    placeholder="—"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label className="font-mono text-[10px] uppercase text-muted-foreground">Protein (g)</Label>
+                  <Input
+                    type="number"
+                    value={protein}
+                    onChange={e => setProtein(e.target.value)}
+                    className="font-mono text-sm bg-background border-border h-8"
+                    placeholder="—"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label className="font-mono text-[10px] uppercase text-muted-foreground">Carbs (g)</Label>
+                  <Input
+                    type="number"
+                    value={carbs}
+                    onChange={e => setCarbs(e.target.value)}
+                    className="font-mono text-sm bg-background border-border h-8"
+                    placeholder="—"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label className="font-mono text-[10px] uppercase text-muted-foreground">Fat (g)</Label>
+                  <Input
+                    type="number"
+                    value={fat}
+                    onChange={e => setFat(e.target.value)}
+                    className="font-mono text-sm bg-background border-border h-8"
+                    placeholder="—"
+                  />
+                </div>
+              </div>
+              {client.macroTargetsRationale && (
+                <p className="text-[11px] text-muted-foreground italic border-l-2 border-primary/40 pl-2">
+                  {client.macroTargetsRationale}
+                </p>
+              )}
+              <div className="flex gap-2 pt-1">
+                {hasScans && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="font-mono text-xs uppercase tracking-wider"
+                    onClick={handleSuggestMacros}
+                    disabled={macroAiMutation.isPending}
+                  >
+                    <Sparkles className="mr-1 h-3 w-3" />
+                    {macroAiMutation.isPending ? "Suggesting..." : "Suggest via AI"}
+                  </Button>
+                )}
+                <Button
+                  size="sm"
+                  className="font-mono text-xs uppercase tracking-wider"
+                  onClick={handleSaveMacros}
+                  disabled={macroManualMutation.isPending}
+                >
+                  <Save className="mr-1 h-3 w-3" />
+                  {macroManualMutation.isPending ? "Saving..." : "Save"}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
       </div>
     </div>
   );
 }
-

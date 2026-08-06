@@ -6,7 +6,12 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from './aiInsight';
 export * from './attendanceRecord';
+export * from './checkinDraft';
+export * from './checkinDraftStatus';
+export * from './checkinDraftUpdate';
+export * from './checkinDraftUpdateStatus';
 export * from './clientDetail';
 export * from './clientDetailEngagementStatus';
 export * from './clientSummary';
@@ -18,4 +23,5 @@ export * from './healthStatus';
 export * from './inBodyScan';
 export * from './listClientsEngagementStatus';
 export * from './listClientsParams';
+export * from './macroUpdate';
 export * from './syncResult';

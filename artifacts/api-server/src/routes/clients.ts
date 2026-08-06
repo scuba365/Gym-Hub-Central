@@ -63,6 +63,14 @@ router.get("/clients", async (req, res) => {
         teamupId: c.teamupId,
         trainerizeId: c.trainerizeId,
         inbodyId: c.inbodyId,
+        dailyCalorieTarget: c.dailyCalorieTarget,
+        proteinTargetG: c.proteinTargetG,
+        carbsTargetG: c.carbsTargetG,
+        fatTargetG: c.fatTargetG,
+        macroTargetsUpdatedAt: c.macroTargetsUpdatedAt,
+        macroTargetsRationale: c.macroTargetsRationale,
+        lastAiInsight: c.lastAiInsight,
+        lastAiInsightAt: c.lastAiInsightAt,
       }))
     );
   } catch (err) {
@@ -144,6 +152,14 @@ router.get("/clients/:id", async (req, res) => {
       teamupId: client.teamupId,
       trainerizeId: client.trainerizeId,
       inbodyId: client.inbodyId,
+      dailyCalorieTarget: client.dailyCalorieTarget,
+      proteinTargetG: client.proteinTargetG,
+      carbsTargetG: client.carbsTargetG,
+      fatTargetG: client.fatTargetG,
+      macroTargetsUpdatedAt: client.macroTargetsUpdatedAt,
+      macroTargetsRationale: client.macroTargetsRationale,
+      lastAiInsight: client.lastAiInsight,
+      lastAiInsightAt: client.lastAiInsightAt,
       recentScans: sortedScans,
       recentAttendance: sortedAttendance,
     });
@@ -200,6 +216,14 @@ router.put("/clients/:id", async (req, res) => {
       teamupId: updated.teamupId,
       trainerizeId: updated.trainerizeId,
       inbodyId: updated.inbodyId,
+      dailyCalorieTarget: updated.dailyCalorieTarget,
+      proteinTargetG: updated.proteinTargetG,
+      carbsTargetG: updated.carbsTargetG,
+      fatTargetG: updated.fatTargetG,
+      macroTargetsUpdatedAt: updated.macroTargetsUpdatedAt,
+      macroTargetsRationale: updated.macroTargetsRationale,
+      lastAiInsight: updated.lastAiInsight,
+      lastAiInsightAt: updated.lastAiInsightAt,
     });
   } catch (err) {
     return res.status(500).json({ error: "Failed to update client" });

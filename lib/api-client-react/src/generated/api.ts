@@ -20,7 +20,10 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  AiInsight,
   AttendanceRecord,
+  CheckinDraft,
+  CheckinDraftUpdate,
   ClientDetail,
   ClientSummary,
   ClientUpdate,
@@ -29,6 +32,7 @@ import type {
   HealthStatus,
   InBodyScan,
   ListClientsParams,
+  MacroUpdate,
   SyncResult
 } from './api.schemas';
 
@@ -508,6 +512,439 @@ export function useGetClientAttendance<TData = Awaited<ReturnType<typeof getClie
 
 
 
+
+export const getGenerateClientInsightUrl = (id: number,) => {
+
+
+
+
+  return `/api/clients/${id}/ai/insight`
+}
+
+/**
+ * @summary Generate AI insight for a client and persist it
+ */
+export const generateClientInsight = async (id: number, options?: RequestInit): Promise<AiInsight> => {
+
+  return customFetch<AiInsight>(getGenerateClientInsightUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getGenerateClientInsightMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof generateClientInsight>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof generateClientInsight>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['generateClientInsight'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof generateClientInsight>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  generateClientInsight(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type GenerateClientInsightMutationResult = NonNullable<Awaited<ReturnType<typeof generateClientInsight>>>
+
+    export type GenerateClientInsightMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Generate AI insight for a client and persist it
+ */
+export const useGenerateClientInsight = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof generateClientInsight>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof generateClientInsight>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getGenerateClientInsightMutationOptions(options));
+    }
+
+export const getGenerateCheckinDraftUrl = (id: number,) => {
+
+
+
+
+  return `/api/clients/${id}/ai/checkin`
+}
+
+/**
+ * @summary Generate a check-in message draft for a client
+ */
+export const generateCheckinDraft = async (id: number, options?: RequestInit): Promise<CheckinDraft> => {
+
+  return customFetch<CheckinDraft>(getGenerateCheckinDraftUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getGenerateCheckinDraftMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof generateCheckinDraft>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof generateCheckinDraft>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['generateCheckinDraft'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof generateCheckinDraft>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  generateCheckinDraft(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type GenerateCheckinDraftMutationResult = NonNullable<Awaited<ReturnType<typeof generateCheckinDraft>>>
+
+    export type GenerateCheckinDraftMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Generate a check-in message draft for a client
+ */
+export const useGenerateCheckinDraft = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof generateCheckinDraft>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof generateCheckinDraft>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getGenerateCheckinDraftMutationOptions(options));
+    }
+
+export const getListCheckinDraftsUrl = (id: number,) => {
+
+
+
+
+  return `/api/clients/${id}/ai/checkins`
+}
+
+/**
+ * @summary List recent check-in drafts for a client
+ */
+export const listCheckinDrafts = async (id: number, options?: RequestInit): Promise<CheckinDraft[]> => {
+
+  return customFetch<CheckinDraft[]>(getListCheckinDraftsUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListCheckinDraftsQueryKey = (id: number,) => {
+    return [
+    `/api/clients/${id}/ai/checkins`
+    ] as const;
+    }
+
+
+export const getListCheckinDraftsQueryOptions = <TData = Awaited<ReturnType<typeof listCheckinDrafts>>, TError = ErrorType<ErrorResponse>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listCheckinDrafts>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListCheckinDraftsQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listCheckinDrafts>>> = ({ signal }) => listCheckinDrafts(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(id), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listCheckinDrafts>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListCheckinDraftsQueryResult = NonNullable<Awaited<ReturnType<typeof listCheckinDrafts>>>
+export type ListCheckinDraftsQueryError = ErrorType<ErrorResponse>
+
+
+/**
+ * @summary List recent check-in drafts for a client
+ */
+
+export function useListCheckinDrafts<TData = Awaited<ReturnType<typeof listCheckinDrafts>>, TError = ErrorType<ErrorResponse>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listCheckinDrafts>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListCheckinDraftsQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getUpdateCheckinDraftUrl = (id: number,
+    draftId: number,) => {
+
+
+
+
+  return `/api/clients/${id}/ai/checkins/${draftId}`
+}
+
+/**
+ * @summary Update check-in draft status (mark sent or dismissed)
+ */
+export const updateCheckinDraft = async (id: number,
+    draftId: number,
+    checkinDraftUpdate: CheckinDraftUpdate, options?: RequestInit): Promise<CheckinDraft> => {
+
+  return customFetch<CheckinDraft>(getUpdateCheckinDraftUrl(id,draftId),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      checkinDraftUpdate,)
+  }
+);}
+
+
+
+
+export const getUpdateCheckinDraftMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateCheckinDraft>>, TError,{id: number;draftId: number;data: BodyType<CheckinDraftUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateCheckinDraft>>, TError,{id: number;draftId: number;data: BodyType<CheckinDraftUpdate>}, TContext> => {
+
+const mutationKey = ['updateCheckinDraft'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateCheckinDraft>>, {id: number;draftId: number;data: BodyType<CheckinDraftUpdate>}> = (props) => {
+          const {id,draftId,data} = props ?? {};
+
+          return  updateCheckinDraft(id,draftId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateCheckinDraftMutationResult = NonNullable<Awaited<ReturnType<typeof updateCheckinDraft>>>
+    export type UpdateCheckinDraftMutationBody = BodyType<CheckinDraftUpdate>
+    export type UpdateCheckinDraftMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Update check-in draft status (mark sent or dismissed)
+ */
+export const useUpdateCheckinDraft = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateCheckinDraft>>, TError,{id: number;draftId: number;data: BodyType<CheckinDraftUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateCheckinDraft>>,
+        TError,
+        {id: number;draftId: number;data: BodyType<CheckinDraftUpdate>},
+        TContext
+      > => {
+      return useMutation(getUpdateCheckinDraftMutationOptions(options));
+    }
+
+export const getGenerateMacroTargetsUrl = (id: number,) => {
+
+
+
+
+  return `/api/clients/${id}/ai/macros`
+}
+
+/**
+ * @summary Generate AI macro targets for a client and persist them
+ */
+export const generateMacroTargets = async (id: number, options?: RequestInit): Promise<ClientSummary> => {
+
+  return customFetch<ClientSummary>(getGenerateMacroTargetsUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getGenerateMacroTargetsMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof generateMacroTargets>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof generateMacroTargets>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['generateMacroTargets'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof generateMacroTargets>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  generateMacroTargets(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type GenerateMacroTargetsMutationResult = NonNullable<Awaited<ReturnType<typeof generateMacroTargets>>>
+
+    export type GenerateMacroTargetsMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Generate AI macro targets for a client and persist them
+ */
+export const useGenerateMacroTargets = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof generateMacroTargets>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof generateMacroTargets>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getGenerateMacroTargetsMutationOptions(options));
+    }
+
+export const getUpdateClientMacrosUrl = (id: number,) => {
+
+
+
+
+  return `/api/clients/${id}/macros`
+}
+
+/**
+ * @summary Manually set macro targets for a client
+ */
+export const updateClientMacros = async (id: number,
+    macroUpdate: MacroUpdate, options?: RequestInit): Promise<ClientSummary> => {
+
+  return customFetch<ClientSummary>(getUpdateClientMacrosUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      macroUpdate,)
+  }
+);}
+
+
+
+
+export const getUpdateClientMacrosMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateClientMacros>>, TError,{id: number;data: BodyType<MacroUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateClientMacros>>, TError,{id: number;data: BodyType<MacroUpdate>}, TContext> => {
+
+const mutationKey = ['updateClientMacros'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateClientMacros>>, {id: number;data: BodyType<MacroUpdate>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateClientMacros(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateClientMacrosMutationResult = NonNullable<Awaited<ReturnType<typeof updateClientMacros>>>
+    export type UpdateClientMacrosMutationBody = BodyType<MacroUpdate>
+    export type UpdateClientMacrosMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Manually set macro targets for a client
+ */
+export const useUpdateClientMacros = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateClientMacros>>, TError,{id: number;data: BodyType<MacroUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateClientMacros>>,
+        TError,
+        {id: number;data: BodyType<MacroUpdate>},
+        TContext
+      > => {
+      return useMutation(getUpdateClientMacrosMutationOptions(options));
+    }
 
 export const getSyncAllUrl = () => {
 

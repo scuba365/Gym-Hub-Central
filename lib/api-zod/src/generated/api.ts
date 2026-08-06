@@ -46,7 +46,15 @@ export const ListClientsResponseItem = zod.object({
   "lastSyncedAt": zod.string().nullish(),
   "teamupId": zod.string().nullish(),
   "trainerizeId": zod.string().nullish(),
-  "inbodyId": zod.string().nullish()
+  "inbodyId": zod.string().nullish(),
+  "dailyCalorieTarget": zod.number().nullish(),
+  "proteinTargetG": zod.number().nullish(),
+  "carbsTargetG": zod.number().nullish(),
+  "fatTargetG": zod.number().nullish(),
+  "macroTargetsUpdatedAt": zod.string().nullish(),
+  "macroTargetsRationale": zod.string().nullish(),
+  "lastAiInsight": zod.string().nullish(),
+  "lastAiInsightAt": zod.string().nullish()
 })
 export const ListClientsResponse = zod.array(ListClientsResponseItem)
 
@@ -79,6 +87,14 @@ export const GetClientResponse = zod.object({
   "teamupId": zod.string().nullish(),
   "trainerizeId": zod.string().nullish(),
   "inbodyId": zod.string().nullish(),
+  "dailyCalorieTarget": zod.number().nullish(),
+  "proteinTargetG": zod.number().nullish(),
+  "carbsTargetG": zod.number().nullish(),
+  "fatTargetG": zod.number().nullish(),
+  "macroTargetsUpdatedAt": zod.string().nullish(),
+  "macroTargetsRationale": zod.string().nullish(),
+  "lastAiInsight": zod.string().nullish(),
+  "lastAiInsightAt": zod.string().nullish(),
   "recentScans": zod.array(zod.object({
   "id": zod.number(),
   "clientId": zod.number(),
@@ -133,7 +149,15 @@ export const UpdateClientResponse = zod.object({
   "lastSyncedAt": zod.string().nullish(),
   "teamupId": zod.string().nullish(),
   "trainerizeId": zod.string().nullish(),
-  "inbodyId": zod.string().nullish()
+  "inbodyId": zod.string().nullish(),
+  "dailyCalorieTarget": zod.number().nullish(),
+  "proteinTargetG": zod.number().nullish(),
+  "carbsTargetG": zod.number().nullish(),
+  "fatTargetG": zod.number().nullish(),
+  "macroTargetsUpdatedAt": zod.string().nullish(),
+  "macroTargetsRationale": zod.string().nullish(),
+  "lastAiInsight": zod.string().nullish(),
+  "lastAiInsightAt": zod.string().nullish()
 })
 
 
@@ -173,6 +197,158 @@ export const GetClientAttendanceResponseItem = zod.object({
   "className": zod.string().nullish()
 })
 export const GetClientAttendanceResponse = zod.array(GetClientAttendanceResponseItem)
+
+
+/**
+ * @summary Generate AI insight for a client and persist it
+ */
+export const GenerateClientInsightParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GenerateClientInsightResponse = zod.object({
+  "insight": zod.string(),
+  "generatedAt": zod.string()
+})
+
+
+/**
+ * @summary Generate a check-in message draft for a client
+ */
+export const GenerateCheckinDraftParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GenerateCheckinDraftResponse = zod.object({
+  "id": zod.number(),
+  "clientId": zod.number(),
+  "draftText": zod.string(),
+  "status": zod.enum(['draft', 'sent', 'dismissed']),
+  "createdAt": zod.string().nullish()
+})
+
+
+/**
+ * @summary List recent check-in drafts for a client
+ */
+export const ListCheckinDraftsParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ListCheckinDraftsResponseItem = zod.object({
+  "id": zod.number(),
+  "clientId": zod.number(),
+  "draftText": zod.string(),
+  "status": zod.enum(['draft', 'sent', 'dismissed']),
+  "createdAt": zod.string().nullish()
+})
+export const ListCheckinDraftsResponse = zod.array(ListCheckinDraftsResponseItem)
+
+
+/**
+ * @summary Update check-in draft status (mark sent or dismissed)
+ */
+export const UpdateCheckinDraftParams = zod.object({
+  "id": zod.coerce.number(),
+  "draftId": zod.coerce.number()
+})
+
+export const UpdateCheckinDraftBody = zod.object({
+  "status": zod.enum(['draft', 'sent', 'dismissed'])
+})
+
+export const UpdateCheckinDraftResponse = zod.object({
+  "id": zod.number(),
+  "clientId": zod.number(),
+  "draftText": zod.string(),
+  "status": zod.enum(['draft', 'sent', 'dismissed']),
+  "createdAt": zod.string().nullish()
+})
+
+
+/**
+ * @summary Generate AI macro targets for a client and persist them
+ */
+export const GenerateMacroTargetsParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GenerateMacroTargetsResponse = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "email": zod.string().nullish(),
+  "photoUrl": zod.string().nullish(),
+  "goals": zod.string().nullish(),
+  "needsMealPlan": zod.boolean(),
+  "notes": zod.string().nullish(),
+  "engagementStatus": zod.enum(['active', 'at_risk', 'disengaged', 'unknown']),
+  "weeklyAttendanceAvg": zod.number().nullish(),
+  "lastAttendanceDate": zod.string().nullish(),
+  "lastTrainingDate": zod.string().nullish(),
+  "workoutCompliancePct": zod.number().nullish(),
+  "latestScanDate": zod.string().nullish(),
+  "latestWeight": zod.number().nullish(),
+  "latestBodyFatPct": zod.number().nullish(),
+  "latestMuscleMass": zod.number().nullish(),
+  "lastSyncedAt": zod.string().nullish(),
+  "teamupId": zod.string().nullish(),
+  "trainerizeId": zod.string().nullish(),
+  "inbodyId": zod.string().nullish(),
+  "dailyCalorieTarget": zod.number().nullish(),
+  "proteinTargetG": zod.number().nullish(),
+  "carbsTargetG": zod.number().nullish(),
+  "fatTargetG": zod.number().nullish(),
+  "macroTargetsUpdatedAt": zod.string().nullish(),
+  "macroTargetsRationale": zod.string().nullish(),
+  "lastAiInsight": zod.string().nullish(),
+  "lastAiInsightAt": zod.string().nullish()
+})
+
+
+/**
+ * @summary Manually set macro targets for a client
+ */
+export const UpdateClientMacrosParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateClientMacrosBody = zod.object({
+  "dailyCalorieTarget": zod.number().nullish(),
+  "proteinTargetG": zod.number().nullish(),
+  "carbsTargetG": zod.number().nullish(),
+  "fatTargetG": zod.number().nullish()
+})
+
+export const UpdateClientMacrosResponse = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "email": zod.string().nullish(),
+  "photoUrl": zod.string().nullish(),
+  "goals": zod.string().nullish(),
+  "needsMealPlan": zod.boolean(),
+  "notes": zod.string().nullish(),
+  "engagementStatus": zod.enum(['active', 'at_risk', 'disengaged', 'unknown']),
+  "weeklyAttendanceAvg": zod.number().nullish(),
+  "lastAttendanceDate": zod.string().nullish(),
+  "lastTrainingDate": zod.string().nullish(),
+  "workoutCompliancePct": zod.number().nullish(),
+  "latestScanDate": zod.string().nullish(),
+  "latestWeight": zod.number().nullish(),
+  "latestBodyFatPct": zod.number().nullish(),
+  "latestMuscleMass": zod.number().nullish(),
+  "lastSyncedAt": zod.string().nullish(),
+  "teamupId": zod.string().nullish(),
+  "trainerizeId": zod.string().nullish(),
+  "inbodyId": zod.string().nullish(),
+  "dailyCalorieTarget": zod.number().nullish(),
+  "proteinTargetG": zod.number().nullish(),
+  "carbsTargetG": zod.number().nullish(),
+  "fatTargetG": zod.number().nullish(),
+  "macroTargetsUpdatedAt": zod.string().nullish(),
+  "macroTargetsRationale": zod.string().nullish(),
+  "lastAiInsight": zod.string().nullish(),
+  "lastAiInsightAt": zod.string().nullish()
+})
 
 
 /**

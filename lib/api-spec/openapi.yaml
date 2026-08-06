@@ -16,6 +16,8 @@ tags:
     description: Data synchronization from external platforms
   - name: dashboard
     description: Dashboard summary data
+  - name: ai
+    description: AI-powered client insights and suggestions
 
 paths:
   /healthz:
@@ -157,6 +159,193 @@ paths:
                 items:
                   $ref: "#/components/schemas/AttendanceRecord"
 
+  /clients/{id}/ai/insight:
+    post:
+      operationId: generateClientInsight
+      tags: [ai]
+      summary: Generate AI insight for a client and persist it
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Generated insight
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AiInsight"
+        "400":
+          description: AI not configured
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /clients/{id}/ai/checkin:
+    post:
+      operationId: generateCheckinDraft
+      tags: [ai]
+      summary: Generate a check-in message draft for a client
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Generated check-in draft
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CheckinDraft"
+        "400":
+          description: AI not configured
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /clients/{id}/ai/checkins:
+    get:
+      operationId: listCheckinDrafts
+      tags: [ai]
+      summary: List recent check-in drafts for a client
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of check-in drafts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CheckinDraft"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /clients/{id}/ai/checkins/{draftId}:
+    patch:
+      operationId: updateCheckinDraft
+      tags: [ai]
+      summary: Update check-in draft status (mark sent or dismissed)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: draftId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CheckinDraftUpdate"
+      responses:
+        "200":
+          description: Updated draft
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CheckinDraft"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /clients/{id}/ai/macros:
+    post:
+      operationId: generateMacroTargets
+      tags: [ai]
+      summary: Generate AI macro targets for a client and persist them
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Updated client with AI-generated macro targets
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClientSummary"
+        "400":
+          description: AI not configured or no InBody scan available
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /clients/{id}/macros:
+    patch:
+      operationId: updateClientMacros
+      tags: [clients]
+      summary: Manually set macro targets for a client
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MacroUpdate"
+      responses:
+        "200":
+          description: Updated client
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClientSummary"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /sync:
     post:
       operationId: syncAll
@@ -245,6 +434,22 @@ components:
           type: ["string", "null"]
         inbodyId:
           type: ["string", "null"]
+        dailyCalorieTarget:
+          type: ["number", "null"]
+        proteinTargetG:
+          type: ["number", "null"]
+        carbsTargetG:
+          type: ["number", "null"]
+        fatTargetG:
+          type: ["number", "null"]
+        macroTargetsUpdatedAt:
+          type: ["string", "null"]
+        macroTargetsRationale:
+          type: ["string", "null"]
+        lastAiInsight:
+          type: ["string", "null"]
+        lastAiInsightAt:
+          type: ["string", "null"]
       required:
         - id
         - name
@@ -295,6 +500,22 @@ components:
           type: ["string", "null"]
         inbodyId:
           type: ["string", "null"]
+        dailyCalorieTarget:
+          type: ["number", "null"]
+        proteinTargetG:
+          type: ["number", "null"]
+        carbsTargetG:
+          type: ["number", "null"]
+        fatTargetG:
+          type: ["number", "null"]
+        macroTargetsUpdatedAt:
+          type: ["string", "null"]
+        macroTargetsRationale:
+          type: ["string", "null"]
+        lastAiInsight:
+          type: ["string", "null"]
+        lastAiInsightAt:
+          type: ["string", "null"]
         recentScans:
           type: array
           items:
@@ -320,6 +541,58 @@ components:
           type: boolean
         notes:
           type: ["string", "null"]
+
+    MacroUpdate:
+      type: object
+      properties:
+        dailyCalorieTarget:
+          type: ["number", "null"]
+        proteinTargetG:
+          type: ["number", "null"]
+        carbsTargetG:
+          type: ["number", "null"]
+        fatTargetG:
+          type: ["number", "null"]
+
+    CheckinDraftUpdate:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [draft, sent, dismissed]
+      required:
+        - status
+
+    AiInsight:
+      type: object
+      properties:
+        insight:
+          type: string
+        generatedAt:
+          type: string
+      required:
+        - insight
+        - generatedAt
+
+    CheckinDraft:
+      type: object
+      properties:
+        id:
+          type: integer
+        clientId:
+          type: integer
+        draftText:
+          type: string
+        status:
+          type: string
+          enum: [draft, sent, dismissed]
+        createdAt:
+          type: ["string", "null"]
+      required:
+        - id
+        - clientId
+        - draftText
+        - status
 
     InBodyScan:
       type: object

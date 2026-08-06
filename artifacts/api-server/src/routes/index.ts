@@ -5,6 +5,7 @@ import syncRouter from "./sync";
 import dashboardRouter from "./dashboard";
 import inbodyWebhookRouter from "./inbody-webhook";
 import inbodyImportRouter from "./inbody-import";
+import aiRouter from "./ai";
 
 const router: IRouter = Router();
 
@@ -14,5 +15,6 @@ router.use(syncRouter);
 router.use(dashboardRouter);
 router.use(inbodyWebhookRouter);
 router.use(inbodyImportRouter);
+router.use(aiRouter);
 
 export default router;
