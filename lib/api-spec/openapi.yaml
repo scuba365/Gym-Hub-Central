@@ -346,6 +346,25 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /reports/membership:
+    get:
+      operationId: getMembershipReport
+      tags: [reports]
+      summary: Get rolling 12-month membership metrics from TeamUp
+      responses:
+        "200":
+          description: Membership report
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MembershipReport"
+        "503":
+          description: TeamUp credentials not configured
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /sync:
     post:
       operationId: syncAll
@@ -700,3 +719,53 @@ components:
         - disengagedClients
         - needsMealPlanCount
         - overdueInBodyCount
+
+    MembershipMonthData:
+      type: object
+      properties:
+        month:
+          type: string
+        activeMembers:
+          type: integer
+        newMembers:
+          type: integer
+        churnedMembers:
+          type: integer
+        churnPct:
+          type: number
+        revenue:
+          type: number
+      required:
+        - month
+        - activeMembers
+        - newMembers
+        - churnedMembers
+        - churnPct
+        - revenue
+
+    MembershipCurrent:
+      type: object
+      properties:
+        activeMembers:
+          type: integer
+        revenueTrailing12m:
+          type: number
+        momChange:
+          type: integer
+      required:
+        - activeMembers
+        - revenueTrailing12m
+        - momChange
+
+    MembershipReport:
+      type: object
+      properties:
+        months:
+          type: array
+          items:
+            $ref: "#/components/schemas/MembershipMonthData"
+        current:
+          $ref: "#/components/schemas/MembershipCurrent"
+      required:
+        - months
+        - current

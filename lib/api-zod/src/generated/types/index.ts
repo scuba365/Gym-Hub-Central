@@ -24,4 +24,7 @@ export * from './inBodyScan';
 export * from './listClientsEngagementStatus';
 export * from './listClientsParams';
 export * from './macroUpdate';
+export * from './membershipCurrent';
+export * from './membershipMonthData';
+export * from './membershipReport';
 export * from './syncResult';

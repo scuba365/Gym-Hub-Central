@@ -33,6 +33,7 @@ import type {
   InBodyScan,
   ListClientsParams,
   MacroUpdate,
+  MembershipReport,
   SyncResult
 } from './api.schemas';
 
@@ -945,6 +946,83 @@ export const useUpdateClientMacros = <TError = ErrorType<ErrorResponse>,
       > => {
       return useMutation(getUpdateClientMacrosMutationOptions(options));
     }
+
+export const getGetMembershipReportUrl = () => {
+
+
+
+
+  return `/api/reports/membership`
+}
+
+/**
+ * @summary Get rolling 12-month membership metrics from TeamUp
+ */
+export const getMembershipReport = async ( options?: RequestInit): Promise<MembershipReport> => {
+
+  return customFetch<MembershipReport>(getGetMembershipReportUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetMembershipReportQueryKey = () => {
+    return [
+    `/api/reports/membership`
+    ] as const;
+    }
+
+
+export const getGetMembershipReportQueryOptions = <TData = Awaited<ReturnType<typeof getMembershipReport>>, TError = ErrorType<ErrorResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMembershipReport>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetMembershipReportQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getMembershipReport>>> = ({ signal }) => getMembershipReport({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getMembershipReport>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetMembershipReportQueryResult = NonNullable<Awaited<ReturnType<typeof getMembershipReport>>>
+export type GetMembershipReportQueryError = ErrorType<ErrorResponse>
+
+
+/**
+ * @summary Get rolling 12-month membership metrics from TeamUp
+ */
+
+export function useGetMembershipReport<TData = Awaited<ReturnType<typeof getMembershipReport>>, TError = ErrorType<ErrorResponse>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMembershipReport>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetMembershipReportQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
 
 export const getSyncAllUrl = () => {
 

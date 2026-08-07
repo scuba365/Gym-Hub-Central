@@ -352,6 +352,26 @@ export const UpdateClientMacrosResponse = zod.object({
 
 
 /**
+ * @summary Get rolling 12-month membership metrics from TeamUp
+ */
+export const GetMembershipReportResponse = zod.object({
+  "months": zod.array(zod.object({
+  "month": zod.string(),
+  "activeMembers": zod.number(),
+  "newMembers": zod.number(),
+  "churnedMembers": zod.number(),
+  "churnPct": zod.number(),
+  "revenue": zod.number()
+})),
+  "current": zod.object({
+  "activeMembers": zod.number(),
+  "revenueTrailing12m": zod.number(),
+  "momChange": zod.number()
+})
+})
+
+
+/**
  * @summary Trigger full data sync from TeamUp, Trainerize, and InBody
  */
 export const SyncAllResponse = zod.object({

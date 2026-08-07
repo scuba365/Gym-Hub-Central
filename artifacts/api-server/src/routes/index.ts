@@ -6,6 +6,7 @@ import dashboardRouter from "./dashboard";
 import inbodyWebhookRouter from "./inbody-webhook";
 import inbodyImportRouter from "./inbody-import";
 import aiRouter from "./ai";
+import reportsRouter from "./reports";
 
 const router: IRouter = Router();
 
@@ -16,5 +17,6 @@ router.use(dashboardRouter);
 router.use(inbodyWebhookRouter);
 router.use(inbodyImportRouter);
 router.use(aiRouter);
+router.use(reportsRouter);
 
 export default router;

@@ -251,6 +251,26 @@ export interface DashboardStats {
   lastSyncedAt?: string | null;
 }
 
+export interface MembershipMonthData {
+  month: string;
+  activeMembers: number;
+  newMembers: number;
+  churnedMembers: number;
+  churnPct: number;
+  revenue: number;
+}
+
+export interface MembershipCurrent {
+  activeMembers: number;
+  revenueTrailing12m: number;
+  momChange: number;
+}
+
+export interface MembershipReport {
+  months: MembershipMonthData[];
+  current: MembershipCurrent;
+}
+
 export type ListClientsParams = {
 search?: string;
 engagementStatus?: ListClientsEngagementStatus;

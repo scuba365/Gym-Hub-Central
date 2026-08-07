@@ -2,9 +2,8 @@ import { db } from "@workspace/db";
 import { clientsTable, attendanceRecordsTable } from "@workspace/db";
 import { eq, gt } from "drizzle-orm";
 import { logger } from "../lib/logger";
+import { GOTEAMUP_BASE, PAGE_SIZE, goteamupFetch, type PaginatedResponse } from "../lib/goteamup";
 
-const GOTEAMUP_BASE = "https://goteamup.com/api/v2";
-const PAGE_SIZE = 100;
 const SYNC_DAYS = 28;
 
 /**
@@ -40,33 +39,13 @@ interface GoTeamUpAttendance {
   status: string;
 }
 
-interface PaginatedResponse<T> {
-  count: number;
-  next: string | null;
-  results: T[];
-}
-
-async function goteamupFetch(url: string, token: string): Promise<any> {
-  const response = await fetch(url, {
-    headers: {
-      Authorization: `Token ${token}`,
-      Accept: "application/json",
-      "Content-Type": "application/json",
-    },
-  });
-  if (!response.ok) {
-    const text = await response.text();
-    throw new Error(`GoTeamUp API error ${response.status}: ${text.slice(0, 200)}`);
-  }
-  return response.json();
-}
 
 /** Returns GoTeamUp customer IDs that have an active customer_membership. */
 async function fetchActiveCustomerIds(token: string): Promise<Set<number>> {
   const ids = new Set<number>();
   let nextUrl: string | null = `${GOTEAMUP_BASE}/customer_memberships?page_size=${PAGE_SIZE}&status=active`;
   while (nextUrl) {
-    const data: PaginatedResponse<{ customer: number }> = await goteamupFetch(nextUrl, token);
+    const data = await goteamupFetch(nextUrl, token) as PaginatedResponse<{ customer: number }>;
     for (const m of data.results) {
       if (m.customer) ids.add(m.customer);
     }
@@ -83,7 +62,7 @@ async function fetchActiveCustomers(
   const active: GoTeamUpCustomer[] = [];
   let nextUrl: string | null = `${GOTEAMUP_BASE}/customers?page_size=${PAGE_SIZE}&participating=true`;
   while (nextUrl) {
-    const data: PaginatedResponse<GoTeamUpCustomer> = await goteamupFetch(nextUrl, token);
+    const data = await goteamupFetch(nextUrl, token) as PaginatedResponse<GoTeamUpCustomer>;
     for (const c of data.results) {
       if (activeIds.has(c.id)) active.push(c);
     }
@@ -103,7 +82,7 @@ async function fetchRecentEvents(token: string, cutoffDate: string): Promise<GoT
     `${GOTEAMUP_BASE}/events?page_size=${PAGE_SIZE}&starts_at_gte=${cutoffDate}&starts_at_lte=${todayStr}`;
   let pages = 0;
   while (nextUrl && pages < 30) {
-    const data: PaginatedResponse<GoTeamUpEvent> = await goteamupFetch(nextUrl, token);
+    const data = await goteamupFetch(nextUrl, token) as PaginatedResponse<GoTeamUpEvent>;
     for (const ev of data.results) {
       // Belt-and-suspenders: skip any event that starts in the future
       // (in case starts_at_lte is ignored by the API)
@@ -135,7 +114,7 @@ async function fetchCustomerRecentAttendances(
   let pages = 0;
 
   while (nextUrl && pages < 10) {
-    const data: PaginatedResponse<GoTeamUpAttendance> = await goteamupFetch(nextUrl, token);
+    const data = await goteamupFetch(nextUrl, token) as PaginatedResponse<GoTeamUpAttendance>;
     let found = 0;
     for (const att of data.results) {
       if (recentEventIds.has(att.event) && att.status !== "not_registered") {

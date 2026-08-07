@@ -19,13 +19,14 @@ import {
 import { SyncButton } from "@/components/sync-button";
 import { InBodyImportButton } from "@/components/inbody-import-button";
 import { ClientCard } from "@/components/client-card";
-import { 
-  Users, 
-  Activity, 
-  AlertTriangle, 
-  UserMinus, 
-  UtensilsCrossed, 
-  Scale 
+import {
+  Users,
+  Activity,
+  AlertTriangle,
+  UserMinus,
+  UtensilsCrossed,
+  Scale,
+  BarChart2,
 } from "lucide-react";
 
 export default function Dashboard() {
@@ -51,6 +52,12 @@ export default function Dashboard() {
           </p>
         </div>
         <div className="flex items-start gap-2">
+          <Link href="/reports">
+            <Button variant="outline" size="sm">
+              <BarChart2 className="h-4 w-4 mr-1" />
+              Reports
+            </Button>
+          </Link>
           <InBodyImportButton />
           <SyncButton lastSyncedAt={stats?.lastSyncedAt} />
         </div>
