@@ -8,8 +8,8 @@ interface GoTeamUpMembership {
   id: number;
   customer: number;
   status: string;
-  started_at: string | null;
-  ended_at: string | null;
+  start_date: string | null;
+  expiration_date: string | null;
 }
 
 interface GoTeamUpPayment {
@@ -90,36 +90,36 @@ router.get("/reports/membership", async (req, res) => {
 
       // Active = membership overlaps this month
       const active = memberships.filter(mem => {
-        if (!mem.started_at) return false;
-        const start = new Date(mem.started_at);
+        if (!mem.start_date) return false;
+        const start = new Date(mem.start_date);
         if (isNaN(start.getTime()) || start > m.end) return false;
-        if (!mem.ended_at) return true;
-        const end = new Date(mem.ended_at);
+        if (!mem.expiration_date) return true;
+        const end = new Date(mem.expiration_date);
         return !isNaN(end.getTime()) && end >= m.start;
       });
 
       // Active at start of this month (= active during previous month) — for churn denominator
       const activeAtStartOfMonth = memberships.filter(mem => {
-        if (!mem.started_at) return false;
-        const start = new Date(mem.started_at);
+        if (!mem.start_date) return false;
+        const start = new Date(mem.start_date);
         if (isNaN(start.getTime()) || start > prevMonth.end) return false;
-        if (!mem.ended_at) return true;
-        const end = new Date(mem.ended_at);
+        if (!mem.expiration_date) return true;
+        const end = new Date(mem.expiration_date);
         return !isNaN(end.getTime()) && end >= prevMonth.start;
       });
 
       // New = started within this month
       const newMembers = memberships.filter(mem => {
-        if (!mem.started_at) return false;
-        const start = new Date(mem.started_at);
+        if (!mem.start_date) return false;
+        const start = new Date(mem.start_date);
         return !isNaN(start.getTime()) && start >= m.start && start <= m.end;
       });
 
       // Churned = ended/expired within this month
       const churned = memberships.filter(mem => {
-        if (!mem.ended_at) return false;
+        if (!mem.expiration_date) return false;
         if (!["expired", "cancelled", "ended"].includes(mem.status)) return false;
-        const end = new Date(mem.ended_at);
+        const end = new Date(mem.expiration_date);
         return !isNaN(end.getTime()) && end >= m.start && end <= m.end;
       });
 
