@@ -284,6 +284,21 @@ export interface MembershipReport {
   upcomingExpirations: ExpiringMembership[];
 }
 
+export interface MembershipDrilldownMember {
+  name: string;
+  planName: string;
+  /** @nullable */
+  startDate: string | null;
+  /** @nullable */
+  expiresOn: string | null;
+}
+
+export interface MembershipDrilldown {
+  month: string;
+  category: string;
+  members: MembershipDrilldownMember[];
+}
+
 export type ListClientsParams = {
 search?: string;
 engagementStatus?: ListClientsEngagementStatus;
@@ -297,5 +312,22 @@ export const ListClientsEngagementStatus = {
   active: 'active',
   at_risk: 'at_risk',
   disengaged: 'disengaged',
+} as const;
+
+export type GetMembershipDrilldownParams = {
+/**
+ * Month in YYYY-MM format
+ */
+month: string;
+category: GetMembershipDrilldownCategory;
+};
+
+export type GetMembershipDrilldownCategory = typeof GetMembershipDrilldownCategory[keyof typeof GetMembershipDrilldownCategory];
+
+
+export const GetMembershipDrilldownCategory = {
+  active: 'active',
+  new: 'new',
+  churned: 'churned',
 } as const;
 

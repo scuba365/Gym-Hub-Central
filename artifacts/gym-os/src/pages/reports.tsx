@@ -1,9 +1,20 @@
-import React from "react";
+import React, { useState } from "react";
 import { Link } from "wouter";
-import { useGetMembershipReport } from "@workspace/api-client-react";
+import {
+  useGetMembershipReport,
+  useGetMembershipDrilldown,
+  getGetMembershipDrilldownQueryKey,
+} from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+} from "@/components/ui/sheet";
 import {
   BarChart,
   Bar,
@@ -17,6 +28,24 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { ArrowLeft, Users, TrendingUp, Euro } from "lucide-react";
+
+type DrilldownCategory = "active" | "new" | "churned";
+
+interface DrilldownState {
+  month: string;
+  category: DrilldownCategory;
+}
+
+const CATEGORY_LABELS: Record<DrilldownCategory, string> = {
+  active: "Active Members",
+  new: "New Members",
+  churned: "Churned Members",
+};
+
+function formatMonth(yyyyMm: string): string {
+  const [y, m] = yyyyMm.split("-");
+  return new Date(Number(y), Number(m) - 1, 1).toLocaleDateString("en-IE", { month: "long", year: "numeric" });
+}
 
 function KpiCard({
   title,
@@ -57,9 +86,20 @@ function KpiCard({
 
 export default function Reports() {
   const { data, isLoading, error } = useGetMembershipReport();
+  const [drilldown, setDrilldown] = useState<DrilldownState | null>(null);
+
+  const drilldownParams = drilldown ?? { month: "", category: "active" as const };
+  const { data: drilldownData, isLoading: drilldownLoading } = useGetMembershipDrilldown(
+    drilldownParams,
+    { query: { queryKey: getGetMembershipDrilldownQueryKey(drilldownParams), enabled: !!drilldown } }
+  );
 
   const momChange = data?.current.momChange ?? 0;
   const momLabel = momChange === 0 ? "±0 vs last month" : momChange > 0 ? `+${momChange} vs last month` : `${momChange} vs last month`;
+
+  function openDrilldown(month: string, category: DrilldownCategory) {
+    setDrilldown({ month, category });
+  }
 
   return (
     <div className="container mx-auto p-4 max-w-7xl">
@@ -86,13 +126,7 @@ export default function Reports() {
 
       {/* KPI cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-        <KpiCard
-          title="Active Members"
-          value={data?.current.activeMembers}
-          subtitle={momLabel}
-          loading={isLoading}
-          icon={Users}
-        />
+        <KpiCard title="Active Members" value={data?.current.activeMembers} subtitle={momLabel} loading={isLoading} icon={Users} />
         <KpiCard
           title="MoM Change"
           value={momChange > 0 ? `+${momChange}` : momChange}
@@ -112,7 +146,10 @@ export default function Reports() {
       {/* Active Members chart */}
       <Card className="mb-6">
         <CardHeader>
-          <CardTitle className="text-base font-semibold uppercase tracking-wider">Active Members — Last 12 Months</CardTitle>
+          <CardTitle className="text-base font-semibold uppercase tracking-wider">
+            Active Members — Last 12 Months
+            <span className="ml-2 text-xs font-normal text-muted-foreground normal-case">(click a bar to see who)</span>
+          </CardTitle>
         </CardHeader>
         <CardContent>
           {isLoading ? (
@@ -127,7 +164,13 @@ export default function Reports() {
                   contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }}
                   formatter={(v: number) => [v, "Active Members"]}
                 />
-                <Bar dataKey="activeMembers" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                <Bar
+                  dataKey="activeMembers"
+                  fill="hsl(var(--primary))"
+                  radius={[4, 4, 0, 0]}
+                  style={{ cursor: "pointer" }}
+                  onClick={(d) => openDrilldown(d.month, "active")}
+                />
               </BarChart>
             </ResponsiveContainer>
           )}
@@ -162,14 +205,25 @@ export default function Reports() {
       {/* Churn % chart */}
       <Card className="mb-6">
         <CardHeader>
-          <CardTitle className="text-base font-semibold uppercase tracking-wider">Churn % — Last 12 Months</CardTitle>
+          <CardTitle className="text-base font-semibold uppercase tracking-wider">
+            Churn % — Last 12 Months
+            <span className="ml-2 text-xs font-normal text-muted-foreground normal-case">(click a point to see who churned)</span>
+          </CardTitle>
         </CardHeader>
         <CardContent>
           {isLoading ? (
             <Skeleton className="h-64 w-full" />
           ) : (
             <ResponsiveContainer width="100%" height={260}>
-              <LineChart data={data?.months ?? []} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
+              <LineChart
+                data={data?.months ?? []}
+                margin={{ top: 5, right: 20, bottom: 5, left: 0 }}
+                onClick={(chartData) => {
+                  const month = chartData?.activePayload?.[0]?.payload?.month;
+                  if (month) openDrilldown(month, "churned");
+                }}
+                style={{ cursor: "pointer" }}
+              >
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
                 <XAxis dataKey="month" stroke="hsl(var(--muted-foreground))" fontSize={11} tickLine={false} axisLine={false} />
                 <YAxis stroke="hsl(var(--muted-foreground))" fontSize={11} tickLine={false} axisLine={false} width={45} tickFormatter={(v) => `${v}%`} />
@@ -182,8 +236,8 @@ export default function Reports() {
                   dataKey="churnPct"
                   stroke="hsl(var(--destructive))"
                   strokeWidth={2}
-                  dot={{ r: 4, fill: "hsl(var(--destructive))" }}
-                  activeDot={{ r: 6 }}
+                  dot={{ r: 5, fill: "hsl(var(--destructive))", cursor: "pointer" }}
+                  activeDot={{ r: 7 }}
                 />
               </LineChart>
             </ResponsiveContainer>
@@ -194,7 +248,10 @@ export default function Reports() {
       {/* New vs Churned grouped bar chart */}
       <Card className="mb-6">
         <CardHeader>
-          <CardTitle className="text-base font-semibold uppercase tracking-wider">New vs Churned Members — Last 12 Months</CardTitle>
+          <CardTitle className="text-base font-semibold uppercase tracking-wider">
+            New vs Churned Members — Last 12 Months
+            <span className="ml-2 text-xs font-normal text-muted-foreground normal-case">(click a bar to see who)</span>
+          </CardTitle>
         </CardHeader>
         <CardContent>
           {isLoading ? (
@@ -209,8 +266,22 @@ export default function Reports() {
                   contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }}
                 />
                 <Legend wrapperStyle={{ fontSize: 12 }} />
-                <Bar dataKey="newMembers" name="New" fill="#22c55e" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="churnedMembers" name="Churned" fill="hsl(var(--destructive))" radius={[4, 4, 0, 0]} />
+                <Bar
+                  dataKey="newMembers"
+                  name="New"
+                  fill="#22c55e"
+                  radius={[4, 4, 0, 0]}
+                  style={{ cursor: "pointer" }}
+                  onClick={(d) => openDrilldown(d.month, "new")}
+                />
+                <Bar
+                  dataKey="churnedMembers"
+                  name="Churned"
+                  fill="hsl(var(--destructive))"
+                  radius={[4, 4, 0, 0]}
+                  style={{ cursor: "pointer" }}
+                  onClick={(d) => openDrilldown(d.month, "churned")}
+                />
               </BarChart>
             </ResponsiveContainer>
           )}
@@ -237,10 +308,7 @@ export default function Reports() {
                   <div key={name} className="flex items-center gap-3">
                     <span className="text-sm w-8 text-right font-semibold tabular-nums shrink-0">{count}</span>
                     <div className="flex-1 bg-muted rounded-full h-2 overflow-hidden">
-                      <div
-                        className="h-2 rounded-full bg-primary"
-                        style={{ width: `${(count / max) * 100}%` }}
-                      />
+                      <div className="h-2 rounded-full bg-primary" style={{ width: `${(count / max) * 100}%` }} />
                     </div>
                     <span className="text-sm text-muted-foreground truncate max-w-xs">{name}</span>
                   </div>
@@ -250,6 +318,7 @@ export default function Reports() {
           })()}
         </CardContent>
       </Card>
+
       {/* Upcoming expirations */}
       <Card className="mb-6">
         <CardHeader>
@@ -263,10 +332,7 @@ export default function Reports() {
           ) : !data?.upcomingExpirations.length ? (
             <p className="text-sm text-muted-foreground">No memberships expiring in the next 30 days.</p>
           ) : (() => {
-            const today = new Date().toISOString().split("T")[0];
-            const in7 = new Date();
-            in7.setDate(in7.getDate() + 7);
-            const in7Str = in7.toISOString().split("T")[0];
+            const in7Str = (() => { const d = new Date(); d.setDate(d.getDate() + 7); return d.toISOString().split("T")[0]; })();
             return (
               <div className="divide-y divide-border">
                 {data.upcomingExpirations.map(({ name, planName, expiresOn }) => {
@@ -287,6 +353,44 @@ export default function Reports() {
           })()}
         </CardContent>
       </Card>
+
+      {/* Drilldown Sheet */}
+      <Sheet open={!!drilldown} onOpenChange={(open) => { if (!open) setDrilldown(null); }}>
+        <SheetContent side="right" className="w-full sm:max-w-md overflow-y-auto">
+          <SheetHeader className="mb-4">
+            <SheetTitle>
+              {drilldown ? CATEGORY_LABELS[drilldown.category] : ""}
+            </SheetTitle>
+            <SheetDescription>
+              {drilldown ? formatMonth(drilldown.month) : ""}
+            </SheetDescription>
+          </SheetHeader>
+
+          {drilldownLoading ? (
+            <div className="space-y-3">
+              {[...Array(8)].map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}
+            </div>
+          ) : !drilldownData?.members.length ? (
+            <p className="text-sm text-muted-foreground">No members found for this period.</p>
+          ) : (
+            <div className="divide-y divide-border">
+              {drilldownData.members.map(({ name, planName, startDate, expiresOn }) => (
+                <div key={`${name}-${startDate}`} className="py-3">
+                  <p className="text-sm font-medium">{name}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">{planName}</p>
+                  {(startDate || expiresOn) && (
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {startDate && `From ${new Date(startDate + "T12:00:00Z").toLocaleDateString("en-IE", { day: "numeric", month: "short", year: "numeric" })}`}
+                      {startDate && expiresOn && " · "}
+                      {expiresOn && `Expires ${new Date(expiresOn + "T12:00:00Z").toLocaleDateString("en-IE", { day: "numeric", month: "short", year: "numeric" })}`}
+                    </p>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }

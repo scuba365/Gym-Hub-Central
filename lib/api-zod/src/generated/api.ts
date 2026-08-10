@@ -381,6 +381,26 @@ export const GetMembershipReportResponse = zod.object({
 
 
 /**
+ * @summary Get member list for a specific month and category
+ */
+export const GetMembershipDrilldownQueryParams = zod.object({
+  "month": zod.coerce.string().describe('Month in YYYY-MM format'),
+  "category": zod.enum(['active', 'new', 'churned'])
+})
+
+export const GetMembershipDrilldownResponse = zod.object({
+  "month": zod.string(),
+  "category": zod.string(),
+  "members": zod.array(zod.object({
+  "name": zod.string(),
+  "planName": zod.string(),
+  "startDate": zod.string().nullable(),
+  "expiresOn": zod.string().nullable()
+}))
+})
+
+
+/**
  * @summary Trigger full data sync from TeamUp, Trainerize, and InBody
  */
 export const SyncAllResponse = zod.object({

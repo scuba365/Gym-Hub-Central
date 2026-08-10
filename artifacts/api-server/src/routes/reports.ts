@@ -1,9 +1,9 @@
 import { Router } from "express";
-import { GOTEAMUP_BASE, PAGE_SIZE, goteamupFetch, goteamupFetchAll } from "../lib/goteamup";
+import { GOTEAMUP_BASE, PAGE_SIZE, goteamupFetchAll } from "../lib/goteamup";
 import { logger } from "../lib/logger";
 import { db } from "@workspace/db";
 import { clientsTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { inArray } from "drizzle-orm";
 
 const router = Router();
 
@@ -23,8 +23,35 @@ interface GoTeamUpPayment {
   status: string;
 }
 
-function monthKey(date: Date): string {
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+// 10-minute membership cache — avoids re-fetching GoTeamUp on drilldown clicks
+let membershipCache: { data: GoTeamUpMembership[]; at: number } | null = null;
+const CACHE_MS = 10 * 60 * 1000;
+
+async function getMemberships(token: string): Promise<GoTeamUpMembership[]> {
+  if (membershipCache && Date.now() - membershipCache.at < CACHE_MS) {
+    return membershipCache.data;
+  }
+  const data = await goteamupFetchAll<GoTeamUpMembership>(
+    `${GOTEAMUP_BASE}/customer_memberships?page_size=${PAGE_SIZE}`,
+    token
+  );
+  membershipCache = { data, at: Date.now() };
+  logger.info({ count: data.length }, "Reports: fetched and cached memberships");
+  return data;
+}
+
+// Batch-resolve GoTeamUp customer IDs → names from our local DB
+async function resolveNames(customerIds: number[]): Promise<Map<number, string>> {
+  if (customerIds.length === 0) return new Map();
+  const rows = await db
+    .select({ teamupId: clientsTable.teamupId, name: clientsTable.name })
+    .from(clientsTable)
+    .where(inArray(clientsTable.teamupId, customerIds.map(String)));
+  const map = new Map<number, string>();
+  for (const r of rows) {
+    if (r.teamupId) map.set(Number(r.teamupId), r.name);
+  }
+  return map;
 }
 
 function monthStart(year: number, month: number): Date {
@@ -35,6 +62,23 @@ function monthEnd(year: number, month: number): Date {
   return new Date(Date.UTC(year, month + 1, 0, 23, 59, 59, 999));
 }
 
+function monthKey(date: Date): string {
+  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}`;
+}
+
+function isActiveInMonth(mem: GoTeamUpMembership, start: Date, end: Date): boolean {
+  if (!mem.start_date) return false;
+  const s = new Date(mem.start_date);
+  if (isNaN(s.getTime()) || s > end) return false;
+  if (!mem.expiration_date) return true;
+  const e = new Date(mem.expiration_date);
+  return !isNaN(e.getTime()) && e >= start;
+}
+
+function uniqueCustomers(mems: GoTeamUpMembership[]): number {
+  return new Set(mems.map(m => m.customer)).size;
+}
+
 // GET /reports/membership
 router.get("/reports/membership", async (req, res) => {
   const token = process.env.TEAMUP_M2M_TOKEN;
@@ -43,12 +87,7 @@ router.get("/reports/membership", async (req, res) => {
   }
 
   try {
-    // Fetch all memberships (no status filter — we want historical data too)
-    const memberships = await goteamupFetchAll<GoTeamUpMembership>(
-      `${GOTEAMUP_BASE}/customer_memberships?page_size=${PAGE_SIZE}`,
-      token
-    );
-    logger.info({ count: memberships.length }, "Reports: fetched memberships");
+    const memberships = await getMemberships(token);
 
     // Fetch payments — graceful degradation if endpoint unavailable
     let payments: GoTeamUpPayment[] = [];
@@ -67,12 +106,10 @@ router.get("/reports/membership", async (req, res) => {
     const months: Array<{ key: string; start: Date; end: Date }> = [];
     for (let i = 12; i >= 0; i--) {
       const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - i, 1));
-      const year = d.getUTCFullYear();
-      const month = d.getUTCMonth();
       months.push({
         key: monthKey(d),
-        start: monthStart(year, month),
-        end: monthEnd(year, month),
+        start: monthStart(d.getUTCFullYear(), d.getUTCMonth()),
+        end: monthEnd(d.getUTCFullYear(), d.getUTCMonth()),
       });
     }
 
@@ -84,96 +121,65 @@ router.get("/reports/membership", async (req, res) => {
       const d = new Date(p.created_at);
       if (isNaN(d.getTime())) continue;
       const key = monthKey(d);
-      const amount = parseFloat(p.amount) || 0;
-      paymentsByMonth.set(key, (paymentsByMonth.get(key) ?? 0) + amount);
+      paymentsByMonth.set(key, (paymentsByMonth.get(key) ?? 0) + (parseFloat(p.amount) || 0));
     }
 
-    // Helper: unique customer count from a membership list
-    function uniqueCustomers(mems: GoTeamUpMembership[]): number {
-      return new Set(mems.map(m => m.customer)).size;
-    }
-
-    // Compute per-month metrics (skip index 0, it's only used as "previous" for index 1)
     const result = months.slice(1).map((m, idx) => {
-      const prevMonth = months[idx]; // one earlier
+      const prevMonth = months[idx];
 
-      // Active = unique customers with a membership overlapping this month
-      const active = memberships.filter(mem => {
-        if (!mem.start_date) return false;
-        const start = new Date(mem.start_date);
-        if (isNaN(start.getTime()) || start > m.end) return false;
-        if (!mem.expiration_date) return true;
-        const end = new Date(mem.expiration_date);
-        return !isNaN(end.getTime()) && end >= m.start;
-      });
+      const active = memberships.filter(mem => isActiveInMonth(mem, m.start, m.end));
 
-      // Active at start of this month (= active during previous month) — for churn denominator
-      const activeAtStartOfMonth = memberships.filter(mem => {
-        if (!mem.start_date) return false;
-        const start = new Date(mem.start_date);
-        if (isNaN(start.getTime()) || start > prevMonth.end) return false;
-        if (!mem.expiration_date) return true;
-        const end = new Date(mem.expiration_date);
-        return !isNaN(end.getTime()) && end >= prevMonth.start;
-      });
+      const activeAtStartOfMonth = memberships.filter(mem =>
+        isActiveInMonth(mem, prevMonth.start, prevMonth.end)
+      );
 
-      // New = unique customers who started a membership this month and had none before
-      const activeCustomerIdsThisMonth = new Set(active.map(m => m.customer));
       const newMembers = memberships.filter(mem => {
         if (!mem.start_date) return false;
         const start = new Date(mem.start_date);
         if (isNaN(start.getTime()) || start < m.start || start > m.end) return false;
-        // Only count if this customer had no earlier membership before this month
-        const hadPrior = memberships.some(
+        return !memberships.some(
           other => other.customer === mem.customer && other.id !== mem.id &&
             other.start_date && new Date(other.start_date) < m.start
         );
-        return !hadPrior;
       });
 
-      // Churned = unique customers whose membership ended this month with no remaining active membership
       const activeCustomerIdsAfterMonth = new Set(
         memberships
           .filter(mem => {
             if (!mem.start_date) return false;
-            const start = new Date(mem.start_date);
-            if (isNaN(start.getTime()) || start > m.end) return false;
+            const s = new Date(mem.start_date);
+            if (isNaN(s.getTime()) || s > m.end) return false;
             if (!mem.expiration_date) return true;
-            const end = new Date(mem.expiration_date);
-            return !isNaN(end.getTime()) && end > m.end;
+            const e = new Date(mem.expiration_date);
+            return !isNaN(e.getTime()) && e > m.end;
           })
           .map(mem => mem.customer)
       );
       const churned = memberships.filter(mem => {
         if (!mem.expiration_date) return false;
         if (!["expired", "cancelled", "ended"].includes(mem.status)) return false;
-        const end = new Date(mem.expiration_date);
-        if (isNaN(end.getTime()) || end < m.start || end > m.end) return false;
-        // Only count if this customer has no membership that extends beyond this month
+        const e = new Date(mem.expiration_date);
+        if (isNaN(e.getTime()) || e < m.start || e > m.end) return false;
         return !activeCustomerIdsAfterMonth.has(mem.customer);
       });
 
       const denominator = uniqueCustomers(activeAtStartOfMonth);
       const churnedCount = new Set(churned.map(m => m.customer)).size;
-      const churnPct = denominator > 0
-        ? Math.round((churnedCount / denominator) * 1000) / 10
-        : 0;
 
       return {
         month: m.key,
         activeMembers: uniqueCustomers(active),
         newMembers: uniqueCustomers(newMembers),
         churnedMembers: churnedCount,
-        churnPct,
+        churnPct: denominator > 0 ? Math.round((churnedCount / denominator) * 1000) / 10 : 0,
         revenue: Math.round((paymentsByMonth.get(m.key) ?? 0) * 100) / 100,
       };
     });
 
-    // Current snapshot (last entry = current month)
     const currentMonth = result[result.length - 1];
-    const prevMonth = result[result.length - 2];
-    const momChange = currentMonth && prevMonth
-      ? currentMonth.activeMembers - prevMonth.activeMembers
+    const prevMonthResult = result[result.length - 2];
+    const momChange = currentMonth && prevMonthResult
+      ? currentMonth.activeMembers - prevMonthResult.activeMembers
       : 0;
 
     const revenueTrailing12m = Math.round(
@@ -181,15 +187,10 @@ router.get("/reports/membership", async (req, res) => {
     ) / 100;
 
     // Breakdown of active memberships this month by plan name
-    const currentMonthBoundary = months[months.length - 1];
-    const activeMembershipsNow = memberships.filter(mem => {
-      if (!mem.start_date) return false;
-      const start = new Date(mem.start_date);
-      if (isNaN(start.getTime()) || start > currentMonthBoundary.end) return false;
-      if (!mem.expiration_date) return true;
-      const end = new Date(mem.expiration_date);
-      return !isNaN(end.getTime()) && end >= currentMonthBoundary.start;
-    });
+    const currentBoundary = months[months.length - 1];
+    const activeMembershipsNow = memberships.filter(mem =>
+      isActiveInMonth(mem, currentBoundary.start, currentBoundary.end)
+    );
     const breakdownMap = new Map<string, number>();
     for (const mem of activeMembershipsNow) {
       const name = mem.name?.trim() || "Unknown";
@@ -207,8 +208,7 @@ router.get("/reports/membership", async (req, res) => {
 
     const expiringByCustomer = new Map<number, GoTeamUpMembership>();
     for (const mem of memberships) {
-      if (mem.status !== "active") continue;
-      if (!mem.expiration_date) continue;
+      if (mem.status !== "active" || !mem.expiration_date) continue;
       if (mem.expiration_date < todayStr || mem.expiration_date > in30Str) continue;
       const existing = expiringByCustomer.get(mem.customer);
       if (!existing || mem.expiration_date > existing.expiration_date!) {
@@ -216,34 +216,120 @@ router.get("/reports/membership", async (req, res) => {
       }
     }
 
-    const upcomingExpirations: Array<{ name: string; planName: string; expiresOn: string }> = [];
-    for (const [customerId, mem] of expiringByCustomer.entries()) {
-      const found = await db.select({ name: clientsTable.name })
-        .from(clientsTable)
-        .where(eq(clientsTable.teamupId, String(customerId)))
-        .limit(1);
-      upcomingExpirations.push({
-        name: found[0]?.name ?? `Member #${customerId}`,
-        planName: mem.name,
-        expiresOn: mem.expiration_date!,
-      });
-    }
-    upcomingExpirations.sort((a, b) => a.expiresOn.localeCompare(b.expiresOn));
+    const expiringIds = Array.from(expiringByCustomer.keys());
+    const expiringNames = await resolveNames(expiringIds);
+    const upcomingExpirations = expiringIds
+      .map(id => {
+        const mem = expiringByCustomer.get(id)!;
+        return {
+          name: expiringNames.get(id) ?? `Member #${id}`,
+          planName: mem.name,
+          expiresOn: mem.expiration_date!,
+        };
+      })
+      .sort((a, b) => a.expiresOn.localeCompare(b.expiresOn));
     logger.info({ count: upcomingExpirations.length }, "Reports: upcoming expirations");
 
     return res.json({
       months: result,
-      current: {
-        activeMembers: currentMonth?.activeMembers ?? 0,
-        revenueTrailing12m,
-        momChange,
-      },
+      current: { activeMembers: currentMonth?.activeMembers ?? 0, revenueTrailing12m, momChange },
       membershipBreakdown,
       upcomingExpirations,
     });
   } catch (err) {
     logger.error({ err }, "Reports: membership report failed");
     return res.status(500).json({ error: (err as Error).message || "Failed to generate report" });
+  }
+});
+
+// GET /reports/membership/drilldown?month=2026-07&category=active|new|churned
+router.get("/reports/membership/drilldown", async (req, res) => {
+  const token = process.env.TEAMUP_M2M_TOKEN;
+  if (!token) {
+    return res.status(503).json({ error: "TeamUp credentials not configured (TEAMUP_M2M_TOKEN)" });
+  }
+
+  const { month, category } = req.query as { month?: string; category?: string };
+  if (!month || !category) {
+    return res.status(400).json({ error: "month (YYYY-MM) and category (active|new|churned) are required" });
+  }
+  if (!["active", "new", "churned"].includes(category)) {
+    return res.status(400).json({ error: "category must be active, new, or churned" });
+  }
+  const parts = month.split("-");
+  const year = parseInt(parts[0]), monthIdx = parseInt(parts[1]) - 1;
+  if (isNaN(year) || isNaN(monthIdx) || monthIdx < 0 || monthIdx > 11) {
+    return res.status(400).json({ error: "Invalid month format — use YYYY-MM" });
+  }
+
+  try {
+    const memberships = await getMemberships(token);
+
+    const mStart = monthStart(year, monthIdx);
+    const mEnd = monthEnd(year, monthIdx);
+
+    let filtered: GoTeamUpMembership[] = [];
+
+    if (category === "active") {
+      filtered = memberships.filter(mem => isActiveInMonth(mem, mStart, mEnd));
+    } else if (category === "new") {
+      filtered = memberships.filter(mem => {
+        if (!mem.start_date) return false;
+        const s = new Date(mem.start_date);
+        if (isNaN(s.getTime()) || s < mStart || s > mEnd) return false;
+        return !memberships.some(
+          other => other.customer === mem.customer && other.id !== mem.id &&
+            other.start_date && new Date(other.start_date) < mStart
+        );
+      });
+    } else {
+      const activeAfter = new Set(
+        memberships
+          .filter(mem => {
+            if (!mem.start_date) return false;
+            const s = new Date(mem.start_date);
+            if (isNaN(s.getTime()) || s > mEnd) return false;
+            if (!mem.expiration_date) return true;
+            const e = new Date(mem.expiration_date);
+            return !isNaN(e.getTime()) && e > mEnd;
+          })
+          .map(mem => mem.customer)
+      );
+      filtered = memberships.filter(mem => {
+        if (!mem.expiration_date) return false;
+        if (!["expired", "cancelled", "ended"].includes(mem.status)) return false;
+        const e = new Date(mem.expiration_date);
+        if (isNaN(e.getTime()) || e < mStart || e > mEnd) return false;
+        return !activeAfter.has(mem.customer);
+      });
+    }
+
+    // Deduplicate by customer — keep the membership most relevant to this query
+    const byCustomer = new Map<number, GoTeamUpMembership>();
+    for (const mem of filtered) {
+      if (!byCustomer.has(mem.customer)) byCustomer.set(mem.customer, mem);
+    }
+
+    const customerIds = Array.from(byCustomer.keys());
+    const nameMap = await resolveNames(customerIds);
+
+    const members = customerIds
+      .map(id => {
+        const mem = byCustomer.get(id)!;
+        return {
+          name: nameMap.get(id) ?? `Member #${id}`,
+          planName: mem.name,
+          startDate: mem.start_date,
+          expiresOn: mem.expiration_date,
+        };
+      })
+      .sort((a, b) => a.name.localeCompare(b.name));
+
+    logger.info({ month, category, count: members.length }, "Reports: drilldown");
+    return res.json({ month, category, members });
+  } catch (err) {
+    logger.error({ err }, "Reports: drilldown failed");
+    return res.status(500).json({ error: (err as Error).message || "Drilldown failed" });
   }
 });
 

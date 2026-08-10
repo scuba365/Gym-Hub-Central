@@ -29,10 +29,12 @@ import type {
   ClientUpdate,
   DashboardStats,
   ErrorResponse,
+  GetMembershipDrilldownParams,
   HealthStatus,
   InBodyScan,
   ListClientsParams,
   MacroUpdate,
+  MembershipDrilldown,
   MembershipReport,
   SyncResult
 } from './api.schemas';
@@ -1012,6 +1014,90 @@ export function useGetMembershipReport<TData = Awaited<ReturnType<typeof getMemb
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getGetMembershipReportQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetMembershipDrilldownUrl = (params: GetMembershipDrilldownParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/reports/membership/drilldown?${stringifiedParams}` : `/api/reports/membership/drilldown`
+}
+
+/**
+ * @summary Get member list for a specific month and category
+ */
+export const getMembershipDrilldown = async (params: GetMembershipDrilldownParams, options?: RequestInit): Promise<MembershipDrilldown> => {
+
+  return customFetch<MembershipDrilldown>(getGetMembershipDrilldownUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetMembershipDrilldownQueryKey = (params?: GetMembershipDrilldownParams,) => {
+    return [
+    `/api/reports/membership/drilldown`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetMembershipDrilldownQueryOptions = <TData = Awaited<ReturnType<typeof getMembershipDrilldown>>, TError = ErrorType<ErrorResponse>>(params: GetMembershipDrilldownParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMembershipDrilldown>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetMembershipDrilldownQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getMembershipDrilldown>>> = ({ signal }) => getMembershipDrilldown(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getMembershipDrilldown>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetMembershipDrilldownQueryResult = NonNullable<Awaited<ReturnType<typeof getMembershipDrilldown>>>
+export type GetMembershipDrilldownQueryError = ErrorType<ErrorResponse>
+
+
+/**
+ * @summary Get member list for a specific month and category
+ */
+
+export function useGetMembershipDrilldown<TData = Awaited<ReturnType<typeof getMembershipDrilldown>>, TError = ErrorType<ErrorResponse>>(
+ params: GetMembershipDrilldownParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMembershipDrilldown>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetMembershipDrilldownQueryOptions(params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 
