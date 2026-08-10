@@ -85,11 +85,16 @@ router.get("/reports/membership", async (req, res) => {
       paymentsByMonth.set(key, (paymentsByMonth.get(key) ?? 0) + amount);
     }
 
+    // Helper: unique customer count from a membership list
+    function uniqueCustomers(mems: GoTeamUpMembership[]): number {
+      return new Set(mems.map(m => m.customer)).size;
+    }
+
     // Compute per-month metrics (skip index 0, it's only used as "previous" for index 1)
     const result = months.slice(1).map((m, idx) => {
       const prevMonth = months[idx]; // one earlier
 
-      // Active = membership overlaps this month
+      // Active = unique customers with a membership overlapping this month
       const active = memberships.filter(mem => {
         if (!mem.start_date) return false;
         const start = new Date(mem.start_date);
@@ -109,31 +114,53 @@ router.get("/reports/membership", async (req, res) => {
         return !isNaN(end.getTime()) && end >= prevMonth.start;
       });
 
-      // New = started within this month
+      // New = unique customers who started a membership this month and had none before
+      const activeCustomerIdsThisMonth = new Set(active.map(m => m.customer));
       const newMembers = memberships.filter(mem => {
         if (!mem.start_date) return false;
         const start = new Date(mem.start_date);
-        return !isNaN(start.getTime()) && start >= m.start && start <= m.end;
+        if (isNaN(start.getTime()) || start < m.start || start > m.end) return false;
+        // Only count if this customer had no earlier membership before this month
+        const hadPrior = memberships.some(
+          other => other.customer === mem.customer && other.id !== mem.id &&
+            other.start_date && new Date(other.start_date) < m.start
+        );
+        return !hadPrior;
       });
 
-      // Churned = ended/expired within this month
+      // Churned = unique customers whose membership ended this month with no remaining active membership
+      const activeCustomerIdsAfterMonth = new Set(
+        memberships
+          .filter(mem => {
+            if (!mem.start_date) return false;
+            const start = new Date(mem.start_date);
+            if (isNaN(start.getTime()) || start > m.end) return false;
+            if (!mem.expiration_date) return true;
+            const end = new Date(mem.expiration_date);
+            return !isNaN(end.getTime()) && end > m.end;
+          })
+          .map(mem => mem.customer)
+      );
       const churned = memberships.filter(mem => {
         if (!mem.expiration_date) return false;
         if (!["expired", "cancelled", "ended"].includes(mem.status)) return false;
         const end = new Date(mem.expiration_date);
-        return !isNaN(end.getTime()) && end >= m.start && end <= m.end;
+        if (isNaN(end.getTime()) || end < m.start || end > m.end) return false;
+        // Only count if this customer has no membership that extends beyond this month
+        return !activeCustomerIdsAfterMonth.has(mem.customer);
       });
 
-      const denominator = activeAtStartOfMonth.length;
+      const denominator = uniqueCustomers(activeAtStartOfMonth);
+      const churnedCount = new Set(churned.map(m => m.customer)).size;
       const churnPct = denominator > 0
-        ? Math.round((churned.length / denominator) * 1000) / 10
+        ? Math.round((churnedCount / denominator) * 1000) / 10
         : 0;
 
       return {
         month: m.key,
-        activeMembers: active.length,
-        newMembers: newMembers.length,
-        churnedMembers: churned.length,
+        activeMembers: uniqueCustomers(active),
+        newMembers: uniqueCustomers(newMembers),
+        churnedMembers: churnedCount,
         churnPct,
         revenue: Math.round((paymentsByMonth.get(m.key) ?? 0) * 100) / 100,
       };
