@@ -757,6 +757,20 @@ components:
         - revenueTrailing12m
         - momChange
 
+    ExpiringMembership:
+      type: object
+      properties:
+        name:
+          type: string
+        planName:
+          type: string
+        expiresOn:
+          type: string
+      required:
+        - name
+        - planName
+        - expiresOn
+
     MembershipBreakdownItem:
       type: object
       properties:
@@ -781,7 +795,12 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/MembershipBreakdownItem"
+        upcomingExpirations:
+          type: array
+          items:
+            $ref: "#/components/schemas/ExpiringMembership"
       required:
         - months
         - current
         - membershipBreakdown
+        - upcomingExpirations

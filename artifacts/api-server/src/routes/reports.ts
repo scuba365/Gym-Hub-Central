@@ -1,6 +1,9 @@
 import { Router } from "express";
 import { GOTEAMUP_BASE, PAGE_SIZE, goteamupFetch, goteamupFetchAll } from "../lib/goteamup";
 import { logger } from "../lib/logger";
+import { db } from "@workspace/db";
+import { clientsTable } from "@workspace/db";
+import { eq } from "drizzle-orm";
 
 const router = Router();
 
@@ -196,6 +199,38 @@ router.get("/reports/membership", async (req, res) => {
       .map(([name, count]) => ({ name, count }))
       .sort((a, b) => b.count - a.count);
 
+    // Upcoming expirations: active memberships expiring within 30 days
+    const todayStr = new Date().toISOString().split("T")[0];
+    const in30 = new Date();
+    in30.setDate(in30.getDate() + 30);
+    const in30Str = in30.toISOString().split("T")[0];
+
+    const expiringByCustomer = new Map<number, GoTeamUpMembership>();
+    for (const mem of memberships) {
+      if (mem.status !== "active") continue;
+      if (!mem.expiration_date) continue;
+      if (mem.expiration_date < todayStr || mem.expiration_date > in30Str) continue;
+      const existing = expiringByCustomer.get(mem.customer);
+      if (!existing || mem.expiration_date > existing.expiration_date!) {
+        expiringByCustomer.set(mem.customer, mem);
+      }
+    }
+
+    const upcomingExpirations: Array<{ name: string; planName: string; expiresOn: string }> = [];
+    for (const [customerId, mem] of expiringByCustomer.entries()) {
+      const found = await db.select({ name: clientsTable.name })
+        .from(clientsTable)
+        .where(eq(clientsTable.teamupId, String(customerId)))
+        .limit(1);
+      upcomingExpirations.push({
+        name: found[0]?.name ?? `Member #${customerId}`,
+        planName: mem.name,
+        expiresOn: mem.expiration_date!,
+      });
+    }
+    upcomingExpirations.sort((a, b) => a.expiresOn.localeCompare(b.expiresOn));
+    logger.info({ count: upcomingExpirations.length }, "Reports: upcoming expirations");
+
     return res.json({
       months: result,
       current: {
@@ -204,6 +239,7 @@ router.get("/reports/membership", async (req, res) => {
         momChange,
       },
       membershipBreakdown,
+      upcomingExpirations,
     });
   } catch (err) {
     logger.error({ err }, "Reports: membership report failed");

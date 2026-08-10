@@ -13,6 +13,7 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip as RechartsTooltip,
+  Legend,
   ResponsiveContainer,
 } from "recharts";
 import { ArrowLeft, Users, TrendingUp, Euro } from "lucide-react";
@@ -190,6 +191,32 @@ export default function Reports() {
         </CardContent>
       </Card>
 
+      {/* New vs Churned grouped bar chart */}
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle className="text-base font-semibold uppercase tracking-wider">New vs Churned Members — Last 12 Months</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {isLoading ? (
+            <Skeleton className="h-64 w-full" />
+          ) : (
+            <ResponsiveContainer width="100%" height={260}>
+              <BarChart data={data?.months ?? []} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
+                <XAxis dataKey="month" stroke="hsl(var(--muted-foreground))" fontSize={11} tickLine={false} axisLine={false} />
+                <YAxis stroke="hsl(var(--muted-foreground))" fontSize={11} tickLine={false} axisLine={false} width={30} />
+                <RechartsTooltip
+                  contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }}
+                />
+                <Legend wrapperStyle={{ fontSize: 12 }} />
+                <Bar dataKey="newMembers" name="New" fill="#22c55e" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="churnedMembers" name="Churned" fill="hsl(var(--destructive))" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          )}
+        </CardContent>
+      </Card>
+
       {/* Membership type breakdown */}
       <Card className="mb-6">
         <CardHeader>
@@ -218,6 +245,43 @@ export default function Reports() {
                     <span className="text-sm text-muted-foreground truncate max-w-xs">{name}</span>
                   </div>
                 ))}
+              </div>
+            );
+          })()}
+        </CardContent>
+      </Card>
+      {/* Upcoming expirations */}
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle className="text-base font-semibold uppercase tracking-wider">Expiring in the Next 30 Days</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {isLoading ? (
+            <div className="space-y-3">
+              {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-8 w-full" />)}
+            </div>
+          ) : !data?.upcomingExpirations.length ? (
+            <p className="text-sm text-muted-foreground">No memberships expiring in the next 30 days.</p>
+          ) : (() => {
+            const today = new Date().toISOString().split("T")[0];
+            const in7 = new Date();
+            in7.setDate(in7.getDate() + 7);
+            const in7Str = in7.toISOString().split("T")[0];
+            return (
+              <div className="divide-y divide-border">
+                {data.upcomingExpirations.map(({ name, planName, expiresOn }) => {
+                  const urgent = expiresOn <= in7Str;
+                  const formatted = new Date(expiresOn + "T12:00:00Z").toLocaleDateString("en-IE", { day: "numeric", month: "short", year: "numeric" });
+                  return (
+                    <div key={`${name}-${expiresOn}`} className="flex items-center justify-between py-2 gap-4">
+                      <span className="text-sm font-medium">{name}</span>
+                      <span className="text-xs text-muted-foreground flex-1 truncate">{planName}</span>
+                      <span className={`text-sm font-semibold tabular-nums shrink-0 ${urgent ? "text-yellow-500" : "text-muted-foreground"}`}>
+                        {formatted}
+                      </span>
+                    </div>
+                  );
+                })}
               </div>
             );
           })()}

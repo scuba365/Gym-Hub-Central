@@ -19,6 +19,7 @@ export * from './clientSummaryEngagementStatus';
 export * from './clientUpdate';
 export * from './dashboardStats';
 export * from './errorResponse';
+export * from './expiringMembership';
 export * from './healthStatus';
 export * from './inBodyScan';
 export * from './listClientsEngagementStatus';

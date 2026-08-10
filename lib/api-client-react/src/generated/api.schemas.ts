@@ -266,6 +266,12 @@ export interface MembershipCurrent {
   momChange: number;
 }
 
+export interface ExpiringMembership {
+  name: string;
+  planName: string;
+  expiresOn: string;
+}
+
 export interface MembershipBreakdownItem {
   name: string;
   count: number;
@@ -275,6 +281,7 @@ export interface MembershipReport {
   months: MembershipMonthData[];
   current: MembershipCurrent;
   membershipBreakdown: MembershipBreakdownItem[];
+  upcomingExpirations: ExpiringMembership[];
 }
 
 export type ListClientsParams = {

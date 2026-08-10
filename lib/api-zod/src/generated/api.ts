@@ -371,6 +371,11 @@ export const GetMembershipReportResponse = zod.object({
   "membershipBreakdown": zod.array(zod.object({
   "name": zod.string(),
   "count": zod.number()
+})),
+  "upcomingExpirations": zod.array(zod.object({
+  "name": zod.string(),
+  "planName": zod.string(),
+  "expiresOn": zod.string()
 }))
 })
 
