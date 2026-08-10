@@ -189,6 +189,40 @@ export default function Reports() {
           )}
         </CardContent>
       </Card>
+
+      {/* Membership type breakdown */}
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle className="text-base font-semibold uppercase tracking-wider">Active Memberships by Type</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {isLoading ? (
+            <div className="space-y-3">
+              {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-8 w-full" />)}
+            </div>
+          ) : !data?.membershipBreakdown.length ? (
+            <p className="text-sm text-muted-foreground">No active memberships found.</p>
+          ) : (() => {
+            const max = data.membershipBreakdown[0].count;
+            return (
+              <div className="space-y-2">
+                {data.membershipBreakdown.map(({ name, count }) => (
+                  <div key={name} className="flex items-center gap-3">
+                    <span className="text-sm w-8 text-right font-semibold tabular-nums shrink-0">{count}</span>
+                    <div className="flex-1 bg-muted rounded-full h-2 overflow-hidden">
+                      <div
+                        className="h-2 rounded-full bg-primary"
+                        style={{ width: `${(count / max) * 100}%` }}
+                      />
+                    </div>
+                    <span className="text-sm text-muted-foreground truncate max-w-xs">{name}</span>
+                  </div>
+                ))}
+              </div>
+            );
+          })()}
+        </CardContent>
+      </Card>
     </div>
   );
 }

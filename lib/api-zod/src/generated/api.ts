@@ -367,7 +367,11 @@ export const GetMembershipReportResponse = zod.object({
   "activeMembers": zod.number(),
   "revenueTrailing12m": zod.number(),
   "momChange": zod.number()
-})
+}),
+  "membershipBreakdown": zod.array(zod.object({
+  "name": zod.string(),
+  "count": zod.number()
+}))
 })
 
 

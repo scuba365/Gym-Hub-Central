@@ -266,9 +266,15 @@ export interface MembershipCurrent {
   momChange: number;
 }
 
+export interface MembershipBreakdownItem {
+  name: string;
+  count: number;
+}
+
 export interface MembershipReport {
   months: MembershipMonthData[];
   current: MembershipCurrent;
+  membershipBreakdown: MembershipBreakdownItem[];
 }
 
 export type ListClientsParams = {

@@ -7,6 +7,7 @@ const router = Router();
 interface GoTeamUpMembership {
   id: number;
   customer: number;
+  name: string;
   status: string;
   start_date: string | null;
   expiration_date: string | null;
@@ -149,6 +150,25 @@ router.get("/reports/membership", async (req, res) => {
       result.reduce((sum, m) => sum + m.revenue, 0) * 100
     ) / 100;
 
+    // Breakdown of active memberships this month by plan name
+    const currentMonthBoundary = months[months.length - 1];
+    const activeMembershipsNow = memberships.filter(mem => {
+      if (!mem.start_date) return false;
+      const start = new Date(mem.start_date);
+      if (isNaN(start.getTime()) || start > currentMonthBoundary.end) return false;
+      if (!mem.expiration_date) return true;
+      const end = new Date(mem.expiration_date);
+      return !isNaN(end.getTime()) && end >= currentMonthBoundary.start;
+    });
+    const breakdownMap = new Map<string, number>();
+    for (const mem of activeMembershipsNow) {
+      const name = mem.name?.trim() || "Unknown";
+      breakdownMap.set(name, (breakdownMap.get(name) ?? 0) + 1);
+    }
+    const membershipBreakdown = Array.from(breakdownMap.entries())
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count);
+
     return res.json({
       months: result,
       current: {
@@ -156,6 +176,7 @@ router.get("/reports/membership", async (req, res) => {
         revenueTrailing12m,
         momChange,
       },
+      membershipBreakdown,
     });
   } catch (err) {
     logger.error({ err }, "Reports: membership report failed");

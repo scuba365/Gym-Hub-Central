@@ -757,6 +757,17 @@ components:
         - revenueTrailing12m
         - momChange
 
+    MembershipBreakdownItem:
+      type: object
+      properties:
+        name:
+          type: string
+        count:
+          type: integer
+      required:
+        - name
+        - count
+
     MembershipReport:
       type: object
       properties:
@@ -766,6 +777,11 @@ components:
             $ref: "#/components/schemas/MembershipMonthData"
         current:
           $ref: "#/components/schemas/MembershipCurrent"
+        membershipBreakdown:
+          type: array
+          items:
+            $ref: "#/components/schemas/MembershipBreakdownItem"
       required:
         - months
         - current
+        - membershipBreakdown
