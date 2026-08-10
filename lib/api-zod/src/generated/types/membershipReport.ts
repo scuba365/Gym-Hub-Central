@@ -5,10 +5,12 @@
  * Gym OS API — unified client data from TeamUp, Trainerize, and InBody
  * OpenAPI spec version: 0.1.0
  */
+import type { MembershipBreakdownItem } from './membershipBreakdownItem';
 import type { MembershipCurrent } from './membershipCurrent';
 import type { MembershipMonthData } from './membershipMonthData';
 
 export interface MembershipReport {
   months: MembershipMonthData[];
   current: MembershipCurrent;
+  membershipBreakdown: MembershipBreakdownItem[];
 }
