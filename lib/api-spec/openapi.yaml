@@ -661,6 +661,8 @@ components:
           type: ["string", "null"]
         needsMealPlan:
           type: boolean
+        isMember:
+          type: boolean
         notes:
           type: ["string", "null"]
 

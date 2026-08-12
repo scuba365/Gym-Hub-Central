@@ -190,6 +190,7 @@ router.put("/clients/:id", async (req, res) => {
     const update: Record<string, unknown> = {};
     if (bodyParsed.data.goals !== undefined) update.goals = bodyParsed.data.goals;
     if (bodyParsed.data.needsMealPlan !== undefined) update.needsMealPlan = bodyParsed.data.needsMealPlan;
+    if (bodyParsed.data.isMember !== undefined) update.isMember = bodyParsed.data.isMember;
     if (bodyParsed.data.notes !== undefined) update.notes = bodyParsed.data.notes;
 
     const [updated] = await db

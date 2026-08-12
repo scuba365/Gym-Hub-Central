@@ -138,6 +138,7 @@ export const UpdateClientParams = zod.object({
 export const UpdateClientBody = zod.object({
   "goals": zod.string().nullish(),
   "needsMealPlan": zod.boolean().optional(),
+  "isMember": zod.boolean().optional(),
   "notes": zod.string().nullish()
 })
 

@@ -1,6 +1,7 @@
 import React from "react";
 import { Link } from "wouter";
-import { ClientSummary } from "@workspace/api-client-react";
+import { ClientSummary, useUpdateClient, getListClientsQueryKey } from "@workspace/api-client-react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -8,18 +9,14 @@ import { format, parseISO } from "date-fns";
 import { Activity, Dumbbell, Utensils, CalendarDays, RefreshCw } from "lucide-react";
 
 export function ClientCard({ client }: { client: ClientSummary }) {
-  
-  const getInitials = (name: string) => {
-    return name
-      .split(" ")
-      .map(n => n[0])
-      .join("")
-      .toUpperCase()
-      .substring(0, 2);
-  };
+  const queryClient = useQueryClient();
+  const updateMutation = useUpdateClient();
+
+  const getInitials = (name: string) =>
+    name.split(" ").map(n => n[0]).join("").toUpperCase().substring(0, 2);
 
   const getStatusColor = (status: string) => {
-    switch(status) {
+    switch (status) {
       case "active": return "bg-primary/20 text-primary border-primary/30";
       case "at_risk": return "bg-yellow-500/20 text-yellow-500 border-yellow-500/30";
       case "disengaged": return "bg-destructive/20 text-destructive border-destructive/30";
@@ -28,7 +25,7 @@ export function ClientCard({ client }: { client: ClientSummary }) {
   };
 
   const getStatusLabel = (status: string) => {
-    switch(status) {
+    switch (status) {
       case "active": return "ACTIVE";
       case "at_risk": return "AT RISK";
       case "disengaged": return "DISENGAGED";
@@ -36,9 +33,24 @@ export function ClientCard({ client }: { client: ClientSummary }) {
     }
   };
 
+  const toggleMember = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    updateMutation.mutate(
+      { id: client.id, data: { isMember: !client.isMember } },
+      {
+        onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: getListClientsQueryKey() });
+        },
+      }
+    );
+  };
+
+  const isPending = updateMutation.isPending;
+
   return (
     <Link href={`/clients/${client.id}`}>
-      <Card className={`group cursor-pointer hover:border-primary/50 transition-colors duration-200 bg-card ${client.engagementStatus === 'disengaged' ? 'opacity-75 grayscale-[0.5]' : ''}`}>
+      <Card className={`group cursor-pointer hover:border-primary/50 transition-colors duration-200 bg-card ${client.engagementStatus === "disengaged" ? "opacity-75 grayscale-[0.5]" : ""}`}>
         <CardContent className="p-5">
           <div className="flex justify-between items-start mb-4">
             <div className="flex items-center gap-3">
@@ -62,6 +74,20 @@ export function ClientCard({ client }: { client: ClientSummary }) {
                 </div>
               </div>
             </div>
+
+            {/* Member / Former toggle */}
+            <button
+              onClick={toggleMember}
+              disabled={isPending}
+              className={`flex-shrink-0 text-[10px] font-mono font-semibold uppercase tracking-wider px-2 py-1 rounded border transition-colors ${
+                client.isMember
+                  ? "border-primary/30 text-primary bg-primary/10 hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30"
+                  : "border-border text-muted-foreground bg-muted/50 hover:bg-primary/10 hover:text-primary hover:border-primary/30"
+              } ${isPending ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
+              title={client.isMember ? "Mark as former member" : "Mark as current member"}
+            >
+              {isPending ? "…" : client.isMember ? "Member" : "Former"}
+            </button>
           </div>
 
           <div className="grid grid-cols-2 gap-y-4 gap-x-2 text-sm mt-4 pt-4 border-t border-border/50">
@@ -71,7 +97,7 @@ export function ClientCard({ client }: { client: ClientSummary }) {
               </p>
               <p className="font-mono text-foreground">{client.weeklyAttendanceAvg?.toFixed(1) || "0.0"} <span className="text-muted-foreground text-xs">classes</span></p>
             </div>
-            
+
             <div>
               <p className="text-muted-foreground text-[10px] uppercase font-semibold tracking-wider flex items-center gap-1 mb-1">
                 <Dumbbell className="h-3 w-3" /> Compliance

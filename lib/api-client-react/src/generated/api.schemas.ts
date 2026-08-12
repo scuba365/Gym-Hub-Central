@@ -181,6 +181,7 @@ export interface ClientUpdate {
   /** @nullable */
   goals?: string | null;
   needsMealPlan?: boolean;
+  isMember?: boolean;
   /** @nullable */
   notes?: string | null;
 }
