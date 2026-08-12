@@ -551,17 +551,42 @@ router.get("/reports/cohort-retention", async (req, res) => {
   }
 });
 
-// GET /reports/debug/business-advisor — probe the TeamUp AI reports list
+// GET /reports/debug/business-advisor — probe TeamUp AI reports: list → latest content → fetch content URI
 router.get("/reports/debug/business-advisor", async (req, res) => {
   const token = process.env.TEAMUP_M2M_TOKEN;
   if (!token) return res.status(503).json({ error: "TEAMUP_M2M_TOKEN not set" });
 
   try {
-    const raw = await goteamupFetch<any>(`${GOTEAMUP_BASE}/ai/business_advisor_reports`, token);
-    logger.info({ raw }, "Reports: business_advisor_reports probe");
-    return res.json(raw);
+    // Step 1: list all reports
+    const list = await goteamupFetch(`${GOTEAMUP_BASE}/ai/business_advisor_reports`, token) as any;
+    logger.info({ list }, "Reports: business_advisor_reports list");
+
+    const reports: any[] = list?.results ?? (Array.isArray(list) ? list : []);
+    if (reports.length === 0) {
+      return res.json({ list, message: "No reports found" });
+    }
+
+    // Step 2: get content metadata for the most recent report
+    const latest = reports[0];
+    const contentMeta = await goteamupFetch(
+      `${GOTEAMUP_BASE}/ai/business_advisor_reports/${latest.id}/content?format=json`,
+      token
+    ) as any;
+    logger.info({ contentMeta }, "Reports: business_advisor content meta");
+
+    // Step 3: fetch the actual content URI if present
+    let contentData: any = null;
+    if (contentMeta?.content) {
+      const contentRes = await fetch(contentMeta.content, {
+        headers: { Authorization: `Token ${token}`, Accept: "application/json" },
+      });
+      contentData = contentRes.ok ? await contentRes.json() : await contentRes.text();
+      logger.info({ contentData }, "Reports: business_advisor content data");
+    }
+
+    return res.json({ reports: reports.slice(0, 5), latest, contentMeta, contentData });
   } catch (err) {
-    logger.error({ err }, "Reports: business_advisor_reports probe failed");
+    logger.error({ err }, "Reports: business_advisor probe failed");
     return res.status(500).json({ error: (err as Error).message });
   }
 });
