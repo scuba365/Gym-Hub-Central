@@ -33,6 +33,7 @@ export interface ClientSummary {
   /** @nullable */
   goals?: string | null;
   needsMealPlan: boolean;
+  isMember: boolean;
   /** @nullable */
   notes?: string | null;
   engagementStatus: ClientSummaryEngagementStatus;
@@ -126,6 +127,7 @@ export interface ClientDetail {
   /** @nullable */
   goals?: string | null;
   needsMealPlan: boolean;
+  isMember: boolean;
   /** @nullable */
   notes?: string | null;
   engagementStatus: ClientDetailEngagementStatus;
@@ -303,6 +305,7 @@ export type ListClientsParams = {
 search?: string;
 engagementStatus?: ListClientsEngagementStatus;
 needsMealPlan?: boolean;
+isMember?: boolean;
 };
 
 export type ListClientsEngagementStatus = typeof ListClientsEngagementStatus[keyof typeof ListClientsEngagementStatus];

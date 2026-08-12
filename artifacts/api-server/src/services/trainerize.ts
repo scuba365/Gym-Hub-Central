@@ -1,6 +1,6 @@
 import { db } from "@workspace/db";
 import { clientsTable, trainingSessionsTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { eq, and, isNotNull, notInArray } from "drizzle-orm";
 import { logger } from "../lib/logger";
 
 const TRAINERIZE_BASE_URL = "https://api.trainerize.com/v03";
@@ -69,6 +69,8 @@ export async function syncTrainerize(): Promise<{ clientsUpdated: number; sessio
 
     logger.info({ count: allClients.length }, "Trainerize: clients fetched");
 
+    const activeTrainerizeIds = new Set<string>();
+
     for (const tc of allClients) {
       // Skip inactive/deleted clients
       if (tc.status !== "active") continue;
@@ -76,6 +78,8 @@ export async function syncTrainerize(): Promise<{ clientsUpdated: number; sessio
       const name = `${tc.firstName} ${tc.lastName}`.trim();
       const email = tc.email?.toLowerCase() || null;
       const trainerizeId = String(tc.id);
+
+      activeTrainerizeIds.add(trainerizeId);
 
       let client = null;
 
@@ -97,6 +101,7 @@ export async function syncTrainerize(): Promise<{ clientsUpdated: number; sessio
             email,
             photoUrl: tc.profileIconUrl || null,
             trainerizeId,
+            isMember: true,
           })
           .returning();
         client = newClient;
@@ -105,6 +110,7 @@ export async function syncTrainerize(): Promise<{ clientsUpdated: number; sessio
         await db.update(clientsTable).set({
           trainerizeId,
           photoUrl: tc.profileIconUrl || client.photoUrl,
+          isMember: true,
         }).where(eq(clientsTable.id, client.id));
       }
 
@@ -136,6 +142,17 @@ export async function syncTrainerize(): Promise<{ clientsUpdated: number; sessio
           lastTrainingDate: lastDate,
         }).where(eq(clientsTable.id, client.id));
       }
+    }
+    // Mark clients no longer active in Trainerize as former members
+    if (activeTrainerizeIds.size > 0) {
+      await db.update(clientsTable)
+        .set({ isMember: false })
+        .where(
+          and(
+            isNotNull(clientsTable.trainerizeId),
+            notInArray(clientsTable.trainerizeId, [...activeTrainerizeIds])
+          )
+        );
     }
   } catch (err) {
     logger.error({ err }, "Trainerize sync error");

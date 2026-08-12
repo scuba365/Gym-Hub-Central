@@ -35,6 +35,10 @@ router.get("/clients", async (req, res) => {
       conditions.push(eq(clientsTable.needsMealPlan, params.needsMealPlan));
     }
 
+    if (params.isMember !== undefined) {
+      conditions.push(eq(clientsTable.isMember, params.isMember));
+    }
+
     if (conditions.length > 0) {
       query = query.where(and(...conditions));
     }
@@ -49,6 +53,7 @@ router.get("/clients", async (req, res) => {
         photoUrl: c.photoUrl,
         goals: c.goals,
         needsMealPlan: c.needsMealPlan,
+        isMember: c.isMember,
         notes: c.notes,
         engagementStatus: c.engagementStatus,
         weeklyAttendanceAvg: c.weeklyAttendanceAvg,
@@ -138,6 +143,7 @@ router.get("/clients/:id", async (req, res) => {
       photoUrl: client.photoUrl,
       goals: client.goals,
       needsMealPlan: client.needsMealPlan,
+      isMember: client.isMember,
       notes: client.notes,
       engagementStatus: client.engagementStatus,
       weeklyAttendanceAvg: client.weeklyAttendanceAvg,
@@ -202,6 +208,7 @@ router.put("/clients/:id", async (req, res) => {
       photoUrl: updated.photoUrl,
       goals: updated.goals,
       needsMealPlan: updated.needsMealPlan,
+      isMember: updated.isMember,
       notes: updated.notes,
       engagementStatus: updated.engagementStatus,
       weeklyAttendanceAvg: updated.weeklyAttendanceAvg,
@@ -227,6 +234,28 @@ router.put("/clients/:id", async (req, res) => {
     });
   } catch (err) {
     return res.status(500).json({ error: "Failed to update client" });
+  }
+});
+
+router.delete("/clients/:id", async (req, res) => {
+  try {
+    const parsed = GetClientParams.safeParse({ id: Number(req.params.id) });
+    if (!parsed.success) {
+      return res.status(400).json({ error: "Invalid id" });
+    }
+
+    const [deleted] = await db
+      .delete(clientsTable)
+      .where(eq(clientsTable.id, parsed.data.id))
+      .returning({ id: clientsTable.id });
+
+    if (!deleted) {
+      return res.status(404).json({ error: "Client not found" });
+    }
+
+    return res.status(204).send();
+  } catch (err) {
+    return res.status(500).json({ error: "Failed to delete client" });
   }
 });
 

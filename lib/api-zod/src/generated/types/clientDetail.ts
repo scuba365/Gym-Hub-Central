@@ -19,6 +19,7 @@ export interface ClientDetail {
   /** @nullable */
   goals?: string | null;
   needsMealPlan: boolean;
+  isMember: boolean;
   /** @nullable */
   notes?: string | null;
   engagementStatus: ClientDetailEngagementStatus;

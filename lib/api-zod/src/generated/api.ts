@@ -23,7 +23,8 @@ export const HealthCheckResponse = zod.object({
 export const ListClientsQueryParams = zod.object({
   "search": zod.coerce.string().optional(),
   "engagementStatus": zod.enum(['active', 'at_risk', 'disengaged']).optional(),
-  "needsMealPlan": zod.coerce.boolean().optional()
+  "needsMealPlan": zod.coerce.boolean().optional(),
+  "isMember": zod.coerce.boolean().optional()
 })
 
 export const ListClientsResponseItem = zod.object({
@@ -33,6 +34,7 @@ export const ListClientsResponseItem = zod.object({
   "photoUrl": zod.string().nullish(),
   "goals": zod.string().nullish(),
   "needsMealPlan": zod.boolean(),
+  "isMember": zod.boolean(),
   "notes": zod.string().nullish(),
   "engagementStatus": zod.enum(['active', 'at_risk', 'disengaged', 'unknown']),
   "weeklyAttendanceAvg": zod.number().nullish(),
@@ -73,6 +75,7 @@ export const GetClientResponse = zod.object({
   "photoUrl": zod.string().nullish(),
   "goals": zod.string().nullish(),
   "needsMealPlan": zod.boolean(),
+  "isMember": zod.boolean(),
   "notes": zod.string().nullish(),
   "engagementStatus": zod.enum(['active', 'at_risk', 'disengaged', 'unknown']),
   "weeklyAttendanceAvg": zod.number().nullish(),
@@ -117,6 +120,14 @@ export const GetClientResponse = zod.object({
 
 
 /**
+ * @summary Delete a client and all associated data
+ */
+export const DeleteClientParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+/**
  * @summary Update editable client fields
  */
 export const UpdateClientParams = zod.object({
@@ -136,6 +147,7 @@ export const UpdateClientResponse = zod.object({
   "photoUrl": zod.string().nullish(),
   "goals": zod.string().nullish(),
   "needsMealPlan": zod.boolean(),
+  "isMember": zod.boolean(),
   "notes": zod.string().nullish(),
   "engagementStatus": zod.enum(['active', 'at_risk', 'disengaged', 'unknown']),
   "weeklyAttendanceAvg": zod.number().nullish(),
@@ -280,6 +292,7 @@ export const GenerateMacroTargetsResponse = zod.object({
   "photoUrl": zod.string().nullish(),
   "goals": zod.string().nullish(),
   "needsMealPlan": zod.boolean(),
+  "isMember": zod.boolean(),
   "notes": zod.string().nullish(),
   "engagementStatus": zod.enum(['active', 'at_risk', 'disengaged', 'unknown']),
   "weeklyAttendanceAvg": zod.number().nullish(),
@@ -326,6 +339,7 @@ export const UpdateClientMacrosResponse = zod.object({
   "photoUrl": zod.string().nullish(),
   "goals": zod.string().nullish(),
   "needsMealPlan": zod.boolean(),
+  "isMember": zod.boolean(),
   "notes": zod.string().nullish(),
   "engagementStatus": zod.enum(['active', 'at_risk', 'disengaged', 'unknown']),
   "weeklyAttendanceAvg": zod.number().nullish(),

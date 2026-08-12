@@ -10,6 +10,7 @@ export const clientsTable = pgTable("clients", {
   photoUrl: text("photo_url"),
   goals: text("goals"),
   needsMealPlan: boolean("needs_meal_plan").notNull().default(false),
+  isMember: boolean("is_member").notNull().default(true),
   notes: text("notes"),
   engagementStatus: text("engagement_status").notNull().default("unknown"),
   weeklyAttendanceAvg: doublePrecision("weekly_attendance_avg"),

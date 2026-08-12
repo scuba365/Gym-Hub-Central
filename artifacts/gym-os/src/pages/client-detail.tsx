@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
-import { useParams, Link } from "wouter";
+import { useParams, Link, useLocation } from "wouter";
 import {
   useGetClient,
   useGetClientScans,
   useGetClientAttendance,
   useUpdateClient,
+  useDeleteClient,
   useGenerateClientInsight,
   useGenerateCheckinDraft,
   useListCheckinDrafts,
@@ -27,6 +28,17 @@ import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { format, parseISO, subDays } from "date-fns";
 import {
@@ -41,6 +53,7 @@ import {
   MessageSquare,
   Copy,
   Check,
+  Trash2,
 } from "lucide-react";
 import {
   LineChart,
@@ -79,7 +92,9 @@ export default function ClientDetail() {
     query: { enabled: !!id, queryKey: getListCheckinDraftsQueryKey(id) },
   });
 
+  const [, navigate] = useLocation();
   const updateMutation = useUpdateClient();
+  const deleteMutation = useDeleteClient();
   const insightMutation = useGenerateClientInsight();
   const checkinMutation = useGenerateCheckinDraft();
   const updateDraftMutation = useUpdateCheckinDraft();
@@ -134,6 +149,18 @@ export default function ClientDetail() {
       onError: () => {
         toast({ variant: "destructive", title: "Error", description: "Failed to save changes." });
       }
+    });
+  };
+
+  const handleDelete = () => {
+    deleteMutation.mutate({ id }, {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: getListClientsQueryKey() });
+        navigate("/");
+      },
+      onError: () => {
+        toast({ variant: "destructive", title: "Error", description: "Failed to delete client." });
+      },
     });
   };
 
@@ -320,11 +347,37 @@ export default function ClientDetail() {
 
   return (
     <div className="container mx-auto p-4 max-w-6xl pb-20">
-      <Link href="/">
-        <Button variant="ghost" size="sm" className="mb-6 -ml-2 text-muted-foreground hover:text-foreground">
-          <ArrowLeft className="mr-2 h-4 w-4" /> Back to Operations
-        </Button>
-      </Link>
+      <div className="flex items-center justify-between mb-6">
+        <Link href="/">
+          <Button variant="ghost" size="sm" className="-ml-2 text-muted-foreground hover:text-foreground">
+            <ArrowLeft className="mr-2 h-4 w-4" /> Back to Operations
+          </Button>
+        </Link>
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-destructive hover:bg-destructive/10">
+              <Trash2 className="h-4 w-4 mr-1" /> Delete Client
+            </Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete {client?.name}?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This permanently deletes the client and all associated scans, attendance records, and check-in drafts. This cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                onClick={handleDelete}
+              >
+                Delete
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </div>
 
       <div className={`flex flex-col md:flex-row gap-6 mb-8 items-start md:items-center justify-between ${isDisengaged ? 'opacity-80' : ''}`}>
         <div className="flex items-center gap-4">

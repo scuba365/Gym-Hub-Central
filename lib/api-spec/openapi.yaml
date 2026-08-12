@@ -53,6 +53,10 @@ paths:
           in: query
           schema:
             type: boolean
+        - name: isMember
+          in: query
+          schema:
+            type: boolean
       responses:
         "200":
           description: List of clients
@@ -81,6 +85,25 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ClientDetail"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      operationId: deleteClient
+      tags: [clients]
+      summary: Delete a client and all associated data
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Client deleted
         "404":
           description: Not found
           content:
@@ -462,6 +485,8 @@ components:
           type: ["string", "null"]
         needsMealPlan:
           type: boolean
+        isMember:
+          type: boolean
         notes:
           type: ["string", "null"]
         engagementStatus:
@@ -511,6 +536,7 @@ components:
         - id
         - name
         - needsMealPlan
+        - isMember
         - engagementStatus
 
     ClientDetail:
@@ -527,6 +553,8 @@ components:
         goals:
           type: ["string", "null"]
         needsMealPlan:
+          type: boolean
+        isMember:
           type: boolean
         notes:
           type: ["string", "null"]
@@ -585,6 +613,7 @@ components:
         - id
         - name
         - needsMealPlan
+        - isMember
         - engagementStatus
         - recentScans
         - recentAttendance

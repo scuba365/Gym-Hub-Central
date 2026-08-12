@@ -11,4 +11,5 @@ export type ListClientsParams = {
 search?: string;
 engagementStatus?: ListClientsEngagementStatus;
 needsMealPlan?: boolean;
+isMember?: boolean;
 };
