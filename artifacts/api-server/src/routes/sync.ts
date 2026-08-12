@@ -10,8 +10,8 @@ import { logger } from "../lib/logger";
 // Centralized, deterministic engagement computation.
 // Called after all sync sources have finished writing their source-specific fields
 // (lastAttendanceDate from TeamUp, lastTrainingDate from Trainerize).
-// TeamUp attendance is the authoritative signal; Trainerize training date is only
-// used as a fallback when no attendance data exists (many members never open the app).
+// TeamUp attendance is the sole signal — Trainerize is a coaching app that members
+// may never use, so app-login dates must not influence membership engagement status.
 async function computeAllEngagementStatuses(): Promise<void> {
   const clients = await db.select().from(clientsTable);
   const now = new Date();
@@ -34,13 +34,7 @@ async function computeAllEngagementStatuses(): Promise<void> {
     const attendanceDays = client.lastAttendanceDate
       ? Math.floor((now.getTime() - new Date(client.lastAttendanceDate).getTime()) / 86400000)
       : null;
-    const trainingDays = client.lastTrainingDate
-      ? Math.floor((now.getTime() - new Date(client.lastTrainingDate).getTime()) / 86400000)
-      : null;
-
-    const worstRank = attendanceDays !== null
-      ? engagementRank(attendanceDays)
-      : engagementRank(trainingDays);
+    const worstRank = engagementRank(attendanceDays);
     const engagementStatus = engagementLabel(worstRank);
 
     await db

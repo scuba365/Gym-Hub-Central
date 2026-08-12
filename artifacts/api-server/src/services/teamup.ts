@@ -1,6 +1,6 @@
 import { db } from "@workspace/db";
 import { clientsTable, attendanceRecordsTable } from "@workspace/db";
-import { eq, gt, sql } from "drizzle-orm";
+import { eq, gt, sql, and, isNotNull, notInArray } from "drizzle-orm";
 import { logger } from "../lib/logger";
 import { GOTEAMUP_BASE, PAGE_SIZE, goteamupFetch, type PaginatedResponse } from "../lib/goteamup";
 
@@ -169,11 +169,13 @@ export async function syncTeamup(): Promise<{ clientsUpdated: number; attendance
 
     // 3. Upsert active customers to DB
     const customerDbMap = new Map<number, number>(); // GoTeamUp ID → DB ID
+    const activeTeamupIds: string[] = [];
 
     for (const c of activeCustomers) {
       const name = `${c.first_name} ${c.last_name}`.trim();
       const email = c.email?.toLowerCase() || null;
       const teamupId = String(c.id);
+      activeTeamupIds.push(teamupId);
       // GoTeamUp returns phone as phone_number or mobile depending on API version
       const phone = normalisePhone(c.phone_number || c.mobile || null);
 
@@ -202,23 +204,33 @@ export async function syncTeamup(): Promise<{ clientsUpdated: number; attendance
       }
 
       if (!client) {
-        const [newClient] = await db.insert(clientsTable).values({ name, email, phone, teamupId }).returning();
+        const [newClient] = await db.insert(clientsTable).values({ name, email, phone, teamupId, isMember: true }).returning();
         client = newClient;
         clientsUpdated++;
       } else {
-        // Always keep phone and teamupId up to date
-        const updates: Record<string, unknown> = {};
+        // Always keep phone, teamupId, and membership status up to date
+        const updates: Record<string, unknown> = { isMember: true };
         if (!client.teamupId) updates.teamupId = teamupId;
         if (phone && !client.phone) updates.phone = phone;
-        if (Object.keys(updates).length > 0) {
-          await db.update(clientsTable).set(updates).where(eq(clientsTable.id, client.id));
-        }
+        await db.update(clientsTable).set(updates).where(eq(clientsTable.id, client.id));
       }
 
       customerDbMap.set(c.id, client.id);
     }
 
-    // 4. Fetch recent events to build eventId → date lookup
+    // 4. Mark any client with a teamupId no longer in the active set as former member
+    if (activeTeamupIds.length > 0) {
+      await db.update(clientsTable)
+        .set({ isMember: false })
+        .where(
+          and(
+            isNotNull(clientsTable.teamupId),
+            notInArray(clientsTable.teamupId, activeTeamupIds)
+          )
+        );
+    }
+
+    // 5. Fetch recent events to build eventId → date lookup
     logger.info({ cutoffStr }, "GoTeamUp: fetching recent events...");
     const recentEvents = await fetchRecentEvents(token, cutoffStr);
     logger.info({ count: recentEvents.length }, "GoTeamUp: recent events fetched");
