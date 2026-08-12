@@ -460,6 +460,25 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /reports/ai-insight:
+    get:
+      operationId: getAiInsight
+      tags: [reports]
+      summary: Latest TeamUp AI business advisor report shaped for GymOS
+      responses:
+        "200":
+          description: AI insight report
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AiInsightReport"
+        "503":
+          description: TeamUp credentials not configured
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /sync:
     post:
       operationId: syncAll
@@ -995,3 +1014,87 @@ components:
             $ref: "#/components/schemas/CohortRow"
       required:
         - cohorts
+
+    AiInsightAction:
+      type: object
+      properties:
+        action:
+          type: string
+        purpose:
+          type: string
+        timeRequired:
+          type: string
+      required: [action, purpose, timeRequired]
+
+    AiInsightStrength:
+      type: object
+      properties:
+        title:
+          type: string
+        metric:
+          type: string
+        insight:
+          type: string
+        percentile:
+          type: ["string", "null"]
+      required: [title, metric, insight]
+
+    AiInsightBottomLine:
+      type: object
+      properties:
+        situation:
+          type: string
+        opportunity:
+          type: string
+        recommendation:
+          type: string
+      required: [situation, opportunity, recommendation]
+
+    AiInsightReport:
+      type: object
+      properties:
+        reportId:
+          type: integer
+        startDate:
+          type: string
+        endDate:
+          type: string
+        availableAt:
+          type: string
+        headline:
+          type: ["string", "null"]
+        healthScore:
+          type: ["number", "null"]
+        healthRating:
+          type: ["string", "null"]
+        bottomLine:
+          oneOf:
+            - $ref: "#/components/schemas/AiInsightBottomLine"
+            - type: "null"
+        keyStrengths:
+          type: array
+          items:
+            $ref: "#/components/schemas/AiInsightStrength"
+        immediateActions:
+          type: array
+          items:
+            $ref: "#/components/schemas/AiInsightAction"
+        revenueThisMonth:
+          type: ["number", "null"]
+        newMembers:
+          type: ["integer", "null"]
+        churnedMembers:
+          type: ["integer", "null"]
+        churnRate:
+          type: ["number", "null"]
+        revenuePerMember:
+          type: ["number", "null"]
+        revenuePerMemberPercentile:
+          type: ["number", "null"]
+      required:
+        - reportId
+        - startDate
+        - endDate
+        - availableAt
+        - keyStrengths
+        - immediateActions

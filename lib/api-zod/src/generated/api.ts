@@ -447,6 +447,42 @@ export const GetCohortRetentionResponse = zod.object({
 
 
 /**
+ * @summary Latest TeamUp AI business advisor report shaped for GymOS
+ */
+export const GetAiInsightResponse = zod.object({
+  "reportId": zod.number(),
+  "startDate": zod.string(),
+  "endDate": zod.string(),
+  "availableAt": zod.string(),
+  "headline": zod.string().nullish(),
+  "healthScore": zod.number().nullish(),
+  "healthRating": zod.string().nullish(),
+  "bottomLine": zod.union([zod.object({
+  "situation": zod.string(),
+  "opportunity": zod.string(),
+  "recommendation": zod.string()
+}),zod.null()]).optional(),
+  "keyStrengths": zod.array(zod.object({
+  "title": zod.string(),
+  "metric": zod.string(),
+  "insight": zod.string(),
+  "percentile": zod.string().nullish()
+})),
+  "immediateActions": zod.array(zod.object({
+  "action": zod.string(),
+  "purpose": zod.string(),
+  "timeRequired": zod.string()
+})),
+  "revenueThisMonth": zod.number().nullish(),
+  "newMembers": zod.number().nullish(),
+  "churnedMembers": zod.number().nullish(),
+  "churnRate": zod.number().nullish(),
+  "revenuePerMember": zod.number().nullish(),
+  "revenuePerMemberPercentile": zod.number().nullish()
+})
+
+
+/**
  * @summary Trigger full data sync from TeamUp, Trainerize, and InBody
  */
 export const SyncAllResponse = zod.object({

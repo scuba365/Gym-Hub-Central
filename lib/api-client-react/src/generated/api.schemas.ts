@@ -331,6 +331,54 @@ export interface CohortRetentionReport {
   cohorts: CohortRow[];
 }
 
+export interface AiInsightAction {
+  action: string;
+  purpose: string;
+  timeRequired: string;
+}
+
+export interface AiInsightStrength {
+  title: string;
+  metric: string;
+  insight: string;
+  /** @nullable */
+  percentile?: string | null;
+}
+
+export interface AiInsightBottomLine {
+  situation: string;
+  opportunity: string;
+  recommendation: string;
+}
+
+export interface AiInsightReport {
+  reportId: number;
+  startDate: string;
+  endDate: string;
+  availableAt: string;
+  /** @nullable */
+  headline?: string | null;
+  /** @nullable */
+  healthScore?: number | null;
+  /** @nullable */
+  healthRating?: string | null;
+  bottomLine?: AiInsightBottomLine | null;
+  keyStrengths: AiInsightStrength[];
+  immediateActions: AiInsightAction[];
+  /** @nullable */
+  revenueThisMonth?: number | null;
+  /** @nullable */
+  newMembers?: number | null;
+  /** @nullable */
+  churnedMembers?: number | null;
+  /** @nullable */
+  churnRate?: number | null;
+  /** @nullable */
+  revenuePerMember?: number | null;
+  /** @nullable */
+  revenuePerMemberPercentile?: number | null;
+}
+
 export type ListClientsParams = {
 search?: string;
 engagementStatus?: ListClientsEngagementStatus;

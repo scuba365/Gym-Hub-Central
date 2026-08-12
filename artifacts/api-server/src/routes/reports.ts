@@ -551,6 +551,82 @@ router.get("/reports/cohort-retention", async (req, res) => {
   }
 });
 
+// 10-minute cache for AI insight
+let aiInsightCache: { data: any; at: number } | null = null;
+
+async function getLatestAiInsight(token: string): Promise<any> {
+  if (aiInsightCache && Date.now() - aiInsightCache.at < CACHE_MS) {
+    return aiInsightCache.data;
+  }
+  const list = await goteamupFetch(`${GOTEAMUP_BASE}/ai/business_advisor_reports`, token) as any;
+  const reports: any[] = list?.results ?? (Array.isArray(list) ? list : []);
+  if (reports.length === 0) return null;
+
+  // Sort descending by available_at and take the most recent
+  const sorted = [...reports].sort((a, b) =>
+    new Date(b.available_at ?? 0).getTime() - new Date(a.available_at ?? 0).getTime()
+  );
+  const latest = sorted[0];
+  const content = await goteamupFetch(
+    `${GOTEAMUP_BASE}/ai/business_advisor_reports/${latest.id}/content?format=json`,
+    token
+  ) as any;
+
+  const data = {
+    reportId: latest.id,
+    startDate: content.start_date ?? latest.start_date,
+    endDate: content.end_date ?? latest.end_date,
+    availableAt: content.available_at ?? latest.available_at,
+    headline: content.executiveSummary?.headline ?? content.headline ?? latest.headline,
+    healthScore: content.analysis?.advanced_insights?.benchmark_analysis?.health_score ?? null,
+    healthRating: content.analysis?.advanced_insights?.benchmark_analysis?.health_rating ?? null,
+    bottomLine: content.bottomLine ?? null,
+    keyStrengths: (content.keyStrengths ?? []).slice(0, 3).map((s: any) => ({
+      title: s.title,
+      metric: s.metric,
+      insight: s.insight,
+      percentile: s.percentile ?? null,
+    })),
+    immediateActions: (content.immediateActions ?? []).slice(0, 5).map((a: any) => ({
+      action: a.action,
+      purpose: a.purpose,
+      timeRequired: a.timeRequired,
+    })),
+    revenueThisMonth: content.analysis?.advanced_insights?.revenue_metrics?.paid_revenue
+      ?? content.analysis?.enhanced_metrics?.revenue_metrics?.paid_revenue
+      ?? null,
+    newMembers: content.analysis?.advanced_insights?.churn_analysis?.new_members
+      ?? content.analysis?.enhanced_metrics?.churn_analysis?.new_members
+      ?? null,
+    churnedMembers: content.analysis?.advanced_insights?.churn_analysis?.churned_members
+      ?? content.analysis?.enhanced_metrics?.churn_analysis?.churned_members
+      ?? null,
+    churnRate: content.analysis?.advanced_insights?.churn_analysis?.churn_rate
+      ?? content.analysis?.enhanced_metrics?.churn_analysis?.churn_rate
+      ?? null,
+    revenuePerMember: content.analysis?.advanced_insights?.benchmark_analysis?.benchmark_results?.revenue_per_member?.value
+      ?? null,
+    revenuePerMemberPercentile: content.analysis?.advanced_insights?.benchmark_analysis?.benchmark_results?.revenue_per_member?.percentile
+      ?? null,
+  };
+  aiInsightCache = { data, at: Date.now() };
+  return data;
+}
+
+// GET /reports/ai-insight — latest TeamUp business advisor report, shaped for GymOS
+router.get("/reports/ai-insight", async (req, res) => {
+  const token = process.env.TEAMUP_M2M_TOKEN;
+  if (!token) return res.status(503).json({ error: "TEAMUP_M2M_TOKEN not set" });
+  try {
+    const insight = await getLatestAiInsight(token);
+    if (!insight) return res.status(404).json({ error: "No business advisor reports found" });
+    return res.json(insight);
+  } catch (err) {
+    logger.error({ err }, "Reports: ai-insight failed");
+    return res.status(500).json({ error: (err as Error).message });
+  }
+});
+
 // GET /reports/debug/business-advisor — probe TeamUp AI reports: list → latest content → fetch content URI
 router.get("/reports/debug/business-advisor", async (req, res) => {
   const token = process.env.TEAMUP_M2M_TOKEN;

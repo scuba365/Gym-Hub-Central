@@ -4,6 +4,7 @@ import {
   useGetMembershipReport,
   useGetMembershipDrilldown,
   useGetCohortRetention,
+  useGetAiInsight,
   getGetMembershipDrilldownQueryKey,
 } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -28,7 +29,7 @@ import {
   Legend,
   ResponsiveContainer,
 } from "recharts";
-import { ArrowLeft, Users, TrendingUp, PoundSterling } from "lucide-react";
+import { ArrowLeft, Users, TrendingUp, PoundSterling, Sparkles, CheckCircle2, Zap, Trophy } from "lucide-react";
 
 type DrilldownCategory = "active" | "new" | "churned";
 
@@ -104,6 +105,7 @@ function retentionText(pct: number | null): string {
 export default function Reports() {
   const { data, isLoading, error } = useGetMembershipReport();
   const { data: cohortData, isLoading: cohortLoading } = useGetCohortRetention();
+  const { data: aiInsight, isLoading: aiLoading } = useGetAiInsight();
 
   const monthsWithRevenue = data?.months ?? [];
   const revenueTrailing12m = data?.current.revenueTrailing12m ?? 0;
@@ -144,6 +146,129 @@ export default function Reports() {
           Failed to load report: {(error as { message?: string }).message ?? "Unknown error"}
         </div>
       )}
+
+      {/* TeamUp AI Business Insight */}
+      {aiLoading ? (
+        <Card className="mb-8 border-primary/20">
+          <CardContent className="pt-6">
+            <Skeleton className="h-4 w-48 mb-3" />
+            <Skeleton className="h-6 w-full mb-4" />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Skeleton className="h-20 w-full" />
+              <Skeleton className="h-20 w-full" />
+            </div>
+          </CardContent>
+        </Card>
+      ) : aiInsight ? (
+        <Card className="mb-8 border-primary/30 bg-primary/5">
+          <CardHeader className="pb-3">
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex items-center gap-2">
+                <Sparkles className="h-4 w-4 text-primary" />
+                <CardTitle className="text-sm font-semibold uppercase tracking-wider text-primary">
+                  TeamUp AI — {new Date(aiInsight.startDate + "T12:00:00Z").toLocaleDateString("en-IE", { month: "long", year: "numeric" })}
+                </CardTitle>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                {aiInsight.healthScore != null && (
+                  <span className={`text-xs font-mono font-bold px-2 py-1 rounded border ${
+                    aiInsight.healthScore >= 70 ? "bg-green-500/10 text-green-500 border-green-500/30" :
+                    aiInsight.healthScore >= 50 ? "bg-yellow-500/10 text-yellow-500 border-yellow-500/30" :
+                    "bg-destructive/10 text-destructive border-destructive/30"
+                  }`}>
+                    {aiInsight.healthScore}/100 {aiInsight.healthRating ?? ""}
+                  </span>
+                )}
+              </div>
+            </div>
+            {aiInsight.headline && (
+              <p className="text-sm text-foreground font-medium mt-2 leading-relaxed">{aiInsight.headline}</p>
+            )}
+          </CardHeader>
+          <CardContent className="pt-0">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+
+              {/* Key metrics from the report */}
+              <div className="flex flex-col gap-2">
+                <p className="text-[10px] font-mono font-semibold uppercase tracking-wider text-muted-foreground mb-1">This Month</p>
+                <div className="grid grid-cols-2 gap-2">
+                  {aiInsight.revenueThisMonth != null && (
+                    <div className="rounded-lg bg-card border border-border p-2">
+                      <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Revenue</p>
+                      <p className="font-mono font-bold text-foreground">£{aiInsight.revenueThisMonth.toLocaleString("en-IE", { maximumFractionDigits: 0 })}</p>
+                    </div>
+                  )}
+                  {aiInsight.churnRate != null && (
+                    <div className="rounded-lg bg-card border border-border p-2">
+                      <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Churn</p>
+                      <p className="font-mono font-bold text-foreground">{aiInsight.churnRate}%</p>
+                    </div>
+                  )}
+                  {aiInsight.newMembers != null && (
+                    <div className="rounded-lg bg-card border border-border p-2">
+                      <p className="text-[10px] text-muted-foreground uppercase tracking-wider">New</p>
+                      <p className="font-mono font-bold text-green-500">+{aiInsight.newMembers}</p>
+                    </div>
+                  )}
+                  {aiInsight.revenuePerMember != null && (
+                    <div className="rounded-lg bg-card border border-border p-2">
+                      <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Rev/Member</p>
+                      <p className="font-mono font-bold text-foreground">
+                        £{Math.round(aiInsight.revenuePerMember)}
+                        {aiInsight.revenuePerMemberPercentile != null && (
+                          <span className="text-primary text-[9px] ml-1">P{aiInsight.revenuePerMemberPercentile}</span>
+                        )}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Key strengths */}
+              {aiInsight.keyStrengths.length > 0 && (
+                <div>
+                  <p className="text-[10px] font-mono font-semibold uppercase tracking-wider text-muted-foreground mb-2">Key Strengths</p>
+                  <div className="space-y-1.5">
+                    {aiInsight.keyStrengths.map((s, i) => (
+                      <div key={i} className="flex items-start gap-2">
+                        <Trophy className="h-3 w-3 text-yellow-500 mt-0.5 shrink-0" />
+                        <div>
+                          <p className="text-xs font-semibold text-foreground">{s.title}</p>
+                          <p className="text-[10px] text-muted-foreground font-mono">{s.metric}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Immediate actions */}
+              {aiInsight.immediateActions.length > 0 && (
+                <div>
+                  <p className="text-[10px] font-mono font-semibold uppercase tracking-wider text-muted-foreground mb-2">
+                    <Zap className="h-3 w-3 inline mr-1" />Immediate Actions
+                  </p>
+                  <div className="space-y-1.5">
+                    {aiInsight.immediateActions.slice(0, 3).map((a, i) => (
+                      <div key={i} className="flex items-start gap-2">
+                        <CheckCircle2 className="h-3 w-3 text-muted-foreground mt-0.5 shrink-0" />
+                        <p className="text-xs text-foreground leading-snug">{a.action}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {aiInsight.bottomLine?.recommendation && (
+              <div className="mt-4 pt-4 border-t border-border/50">
+                <p className="text-[10px] font-mono font-semibold uppercase tracking-wider text-muted-foreground mb-1">Recommendation</p>
+                <p className="text-xs text-muted-foreground leading-relaxed">{aiInsight.bottomLine.recommendation}</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      ) : null}
 
       {/* KPI cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">

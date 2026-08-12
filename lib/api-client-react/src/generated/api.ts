@@ -21,6 +21,7 @@ import type {
 
 import type {
   AiInsight,
+  AiInsightReport,
   AttendanceHeatmapRow,
   AttendanceRecord,
   CheckinDraft,
@@ -1324,6 +1325,83 @@ export function useGetCohortRetention<TData = Awaited<ReturnType<typeof getCohor
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getGetCohortRetentionQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetAiInsightUrl = () => {
+
+
+
+
+  return `/api/reports/ai-insight`
+}
+
+/**
+ * @summary Latest TeamUp AI business advisor report shaped for GymOS
+ */
+export const getAiInsight = async ( options?: RequestInit): Promise<AiInsightReport> => {
+
+  return customFetch<AiInsightReport>(getGetAiInsightUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetAiInsightQueryKey = () => {
+    return [
+    `/api/reports/ai-insight`
+    ] as const;
+    }
+
+
+export const getGetAiInsightQueryOptions = <TData = Awaited<ReturnType<typeof getAiInsight>>, TError = ErrorType<ErrorResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAiInsight>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetAiInsightQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getAiInsight>>> = ({ signal }) => getAiInsight({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getAiInsight>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetAiInsightQueryResult = NonNullable<Awaited<ReturnType<typeof getAiInsight>>>
+export type GetAiInsightQueryError = ErrorType<ErrorResponse>
+
+
+/**
+ * @summary Latest TeamUp AI business advisor report shaped for GymOS
+ */
+
+export function useGetAiInsight<TData = Awaited<ReturnType<typeof getAiInsight>>, TError = ErrorType<ErrorResponse>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAiInsight>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetAiInsightQueryOptions(options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

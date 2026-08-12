@@ -7,6 +7,10 @@
  */
 
 export * from './aiInsight';
+export * from './aiInsightAction';
+export * from './aiInsightBottomLine';
+export * from './aiInsightReport';
+export * from './aiInsightStrength';
 export * from './attendanceHeatmapRow';
 export * from './attendanceRecord';
 export * from './checkinDraft';
