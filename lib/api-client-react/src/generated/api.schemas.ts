@@ -251,6 +251,8 @@ export interface DashboardStats {
   overdueInBodyCount: number;
   /** @nullable */
   lastSyncedAt?: string | null;
+  /** @nullable */
+  avgWeeklyAttendance?: number | null;
 }
 
 export interface MembershipMonthData {

@@ -440,7 +440,8 @@ export const GetDashboardStatsResponse = zod.object({
   "disengagedClients": zod.number(),
   "needsMealPlanCount": zod.number(),
   "overdueInBodyCount": zod.number(),
-  "lastSyncedAt": zod.string().nullish()
+  "lastSyncedAt": zod.string().nullish(),
+  "avgWeeklyAttendance": zod.number().nullish()
 })
 
 

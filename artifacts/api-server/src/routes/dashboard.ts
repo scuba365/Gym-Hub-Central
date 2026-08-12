@@ -20,6 +20,8 @@ router.get("/dashboard/stats", async (req, res) => {
     let disengagedClients = 0;
     let needsMealPlanCount = 0;
     let overdueInBodyCount = 0;
+    let attendanceSum = 0;
+    let attendanceCount = 0;
 
     for (const c of clients) {
       if (c.engagementStatus === "active") activeClients++;
@@ -32,7 +34,17 @@ router.get("/dashboard/stats", async (req, res) => {
       if (!c.latestScanDate || c.latestScanDate < ninetyDaysAgoStr) {
         overdueInBodyCount++;
       }
+
+      // Avg weekly attendance across active members only
+      if (c.isMember && c.weeklyAttendanceAvg != null) {
+        attendanceSum += c.weeklyAttendanceAvg;
+        attendanceCount++;
+      }
     }
+
+    const avgWeeklyAttendance = attendanceCount > 0
+      ? Math.round((attendanceSum / attendanceCount) * 10) / 10
+      : null;
 
     // Get the last sync time
     const lastSyncedAt =
@@ -51,6 +63,7 @@ router.get("/dashboard/stats", async (req, res) => {
       needsMealPlanCount,
       overdueInBodyCount,
       lastSyncedAt,
+      avgWeeklyAttendance,
     });
   } catch (err) {
     res.status(500).json({ error: "Failed to fetch dashboard stats" });

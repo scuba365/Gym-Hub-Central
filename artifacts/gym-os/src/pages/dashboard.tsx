@@ -28,6 +28,7 @@ import {
   UtensilsCrossed,
   Scale,
   BarChart2,
+  TrendingUp,
   ChevronRight,
   MessageCircle,
 } from "lucide-react";
@@ -78,6 +79,12 @@ export default function Dashboard() {
             <Button variant="outline" size="sm">
               <BarChart2 className="h-4 w-4 mr-1" />
               Reports
+            </Button>
+          </Link>
+          <Link href="/growth">
+            <Button variant="outline" size="sm">
+              <TrendingUp className="h-4 w-4 mr-1" />
+              Growth
             </Button>
           </Link>
           <InBodyImportButton />
