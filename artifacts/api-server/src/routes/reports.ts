@@ -7,20 +7,47 @@ import { inArray, sql } from "drizzle-orm";
 
 const router = Router();
 
+// GoTeamUp customer_membership — use `any` internally so we can inspect
+// the actual shape at runtime and handle nested objects or plain IDs.
 interface GoTeamUpMembership {
   id: number;
   customer: number;
-  membership: number | null; // plan template ID
+  membership: any; // may be a plan ID (number) or nested object { id, price, ... }
   name: string;
   status: string;
   start_date: string | null;
   expiration_date: string | null;
+  price?: string | number | null; // sometimes present directly on the assignment
 }
 
 interface GoTeamUpMembershipPlan {
   id: number;
   name: string;
   price: string | number | null;
+}
+
+// Extract a price from a raw customer_membership record (handles multiple shapes)
+function extractPrice(mem: GoTeamUpMembership): number {
+  // 1. Direct price field on the assignment
+  if (mem.price != null) {
+    const p = typeof mem.price === "string" ? parseFloat(mem.price) : Number(mem.price);
+    if (!isNaN(p) && p > 0) return p;
+  }
+  // 2. Nested membership object { price: "50.00", ... }
+  if (mem.membership != null && typeof mem.membership === "object") {
+    const nested = mem.membership as Record<string, any>;
+    const p = typeof nested.price === "string" ? parseFloat(nested.price) : Number(nested.price ?? 0);
+    if (!isNaN(p) && p > 0) return p;
+  }
+  return 0;
+}
+
+// Extract the plan ID from a membership (handles number or nested object)
+function extractPlanId(mem: GoTeamUpMembership): number | null {
+  if (mem.membership == null) return null;
+  if (typeof mem.membership === "number") return mem.membership;
+  if (typeof mem.membership === "object") return (mem.membership as any).id ?? null;
+  return null;
 }
 
 // 10-minute caches
@@ -36,12 +63,16 @@ async function getMemberships(token: string): Promise<GoTeamUpMembership[]> {
     `${GOTEAMUP_BASE}/customer_memberships?page_size=${PAGE_SIZE}`,
     token
   );
+  // Log a sample record so we can see the actual shape in Replit logs
+  if (data.length > 0) {
+    logger.info({ sample: data[0] }, "Reports: customer_membership sample record");
+  }
   membershipCache = { data, at: Date.now() };
   logger.info({ count: data.length }, "Reports: fetched and cached memberships");
   return data;
 }
 
-// Fetch plan templates and build planId → price map
+// Fetch plan templates and build planId → price map (fallback if price not on assignment)
 async function getPlanPrices(token: string): Promise<Map<number, number>> {
   if (planPriceCache && Date.now() - planPriceCache.at < CACHE_MS) {
     return planPriceCache.data;
@@ -51,6 +82,9 @@ async function getPlanPrices(token: string): Promise<Map<number, number>> {
       `${GOTEAMUP_BASE}/memberships?page_size=${PAGE_SIZE}`,
       token
     );
+    if (plans.length > 0) {
+      logger.info({ sample: plans[0] }, "Reports: membership plan sample record");
+    }
     const map = new Map<number, number>();
     for (const p of plans) {
       const price = typeof p.price === "string" ? parseFloat(p.price) : Number(p.price ?? 0);
@@ -200,31 +234,6 @@ function getChurnedMemberships(
   });
 }
 
-// GET /reports/debug/teamup — inspect raw API responses to diagnose field names
-router.get("/reports/debug/teamup", async (req, res) => {
-  const token = process.env.TEAMUP_M2M_TOKEN;
-  if (!token) return res.status(503).json({ error: "No token" });
-  try {
-    const [cusRaw, planRaw] = await Promise.all([
-      (async () => {
-        const r = await fetch(`${GOTEAMUP_BASE}/customer_memberships?page_size=3`, {
-          headers: { Authorization: `Token ${token}`, Accept: "application/json" },
-        });
-        return r.json();
-      })(),
-      (async () => {
-        const r = await fetch(`${GOTEAMUP_BASE}/memberships?page_size=3`, {
-          headers: { Authorization: `Token ${token}`, Accept: "application/json" },
-        });
-        return r.json();
-      })(),
-    ]);
-    return res.json({ customer_memberships_sample: cusRaw, memberships_sample: planRaw });
-  } catch (err) {
-    return res.status(500).json({ error: String(err) });
-  }
-});
-
 // GET /reports/membership
 router.get("/reports/membership", async (req, res) => {
   const token = process.env.TEAMUP_M2M_TOKEN;
@@ -250,17 +259,21 @@ router.get("/reports/membership", async (req, res) => {
       });
     }
 
-    // Revenue: sum plan prices of all memberships active in each month.
-    // Uses plan template price (planPrices map) with fallback to 0 for unknown plans.
+    // Revenue: sum prices of all memberships active in each month.
+    // Priority: (1) price field directly on assignment, (2) nested membership.price,
+    // (3) plan template price lookup by ID.
     const revenueForMonth = (mStart: Date, mEnd: Date): number => {
       let total = 0;
-      // Deduplicate by customer — one revenue entry per customer per month
       const seen = new Set<number>();
       for (const mem of memberships) {
         if (seen.has(mem.customer)) continue;
         if (!isActiveInMonth(mem, mStart, mEnd)) continue;
         seen.add(mem.customer);
-        const price = mem.membership != null ? (planPrices.get(mem.membership) ?? 0) : 0;
+        let price = extractPrice(mem);
+        if (price === 0) {
+          const planId = extractPlanId(mem);
+          if (planId != null) price = planPrices.get(planId) ?? 0;
+        }
         total += price;
       }
       return Math.round(total * 100) / 100;
