@@ -63,9 +63,9 @@ async function getMemberships(token: string): Promise<GoTeamUpMembership[]> {
     `${GOTEAMUP_BASE}/customer_memberships?page_size=${PAGE_SIZE}`,
     token
   );
-  // Log a sample record so we can see the actual shape in Replit logs
+  // Log sample so we can see all field names in Replit logs
   if (data.length > 0) {
-    logger.info({ sample: data[0] }, "Reports: customer_membership sample record");
+    logger.info({ keys: Object.keys(data[0]), sample: data[0] }, "Reports: customer_membership sample");
   }
   membershipCache = { data, at: Date.now() };
   logger.info({ count: data.length }, "Reports: fetched and cached memberships");
@@ -83,7 +83,7 @@ async function getPlanPrices(token: string): Promise<Map<number, number>> {
       token
     );
     if (plans.length > 0) {
-      logger.info({ sample: plans[0] }, "Reports: membership plan sample record");
+      logger.info({ keys: Object.keys(plans[0]), sample: plans[0] }, "Reports: membership plan sample");
     }
     const map = new Map<number, number>();
     for (const p of plans) {
