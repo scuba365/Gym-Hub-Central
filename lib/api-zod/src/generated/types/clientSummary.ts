@@ -13,6 +13,8 @@ export interface ClientSummary {
   /** @nullable */
   email?: string | null;
   /** @nullable */
+  phone?: string | null;
+  /** @nullable */
   photoUrl?: string | null;
   /** @nullable */
   goals?: string | null;

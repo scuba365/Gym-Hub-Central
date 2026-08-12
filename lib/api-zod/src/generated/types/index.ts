@@ -7,6 +7,7 @@
  */
 
 export * from './aiInsight';
+export * from './attendanceHeatmapRow';
 export * from './attendanceRecord';
 export * from './checkinDraft';
 export * from './checkinDraftStatus';
@@ -17,6 +18,8 @@ export * from './clientDetailEngagementStatus';
 export * from './clientSummary';
 export * from './clientSummaryEngagementStatus';
 export * from './clientUpdate';
+export * from './cohortRetentionReport';
+export * from './cohortRow';
 export * from './dashboardStats';
 export * from './errorResponse';
 export * from './expiringMembership';

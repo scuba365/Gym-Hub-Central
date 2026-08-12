@@ -3,6 +3,7 @@ import { Link } from "wouter";
 import {
   useGetMembershipReport,
   useGetMembershipDrilldown,
+  useGetCohortRetention,
   getGetMembershipDrilldownQueryKey,
 } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -84,8 +85,25 @@ function KpiCard({
   );
 }
 
+function retentionBg(pct: number | null): string {
+  if (pct === null) return "transparent";
+  if (pct >= 80) return "hsl(142 71% 45% / 0.25)";
+  if (pct >= 60) return "hsl(142 71% 45% / 0.12)";
+  if (pct >= 40) return "hsl(48 96% 53% / 0.15)";
+  return "hsl(var(--destructive) / 0.15)";
+}
+
+function retentionText(pct: number | null): string {
+  if (pct === null) return "hsl(var(--muted-foreground))";
+  if (pct >= 80) return "hsl(142 71% 35%)";
+  if (pct >= 60) return "hsl(142 71% 35%)";
+  if (pct >= 40) return "hsl(38 92% 40%)";
+  return "hsl(var(--destructive))";
+}
+
 export default function Reports() {
   const { data, isLoading, error } = useGetMembershipReport();
+  const { data: cohortData, isLoading: cohortLoading } = useGetCohortRetention();
   const [drilldown, setDrilldown] = useState<DrilldownState | null>(null);
 
   const drilldownParams = drilldown ?? { month: "", category: "active" as const };
@@ -351,6 +369,58 @@ export default function Reports() {
               </div>
             );
           })()}
+        </CardContent>
+      </Card>
+
+      {/* Cohort Retention */}
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle className="text-base font-semibold uppercase tracking-wider">Member Retention by Join Cohort</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {cohortLoading ? (
+            <div className="space-y-3">{[...Array(6)].map((_, i) => <Skeleton key={i} className="h-8 w-full" />)}</div>
+          ) : !cohortData?.cohorts.length ? (
+            <p className="text-sm text-muted-foreground">No cohort data available yet.</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs font-mono">
+                <thead>
+                  <tr className="border-b border-border">
+                    <th className="text-left text-muted-foreground font-semibold pb-2 pr-4">Cohort</th>
+                    <th className="text-center text-muted-foreground font-semibold pb-2 px-3">Size</th>
+                    <th className="text-center text-muted-foreground font-semibold pb-2 px-3">M+1</th>
+                    <th className="text-center text-muted-foreground font-semibold pb-2 px-3">M+3</th>
+                    <th className="text-center text-muted-foreground font-semibold pb-2 px-3">M+6</th>
+                    <th className="text-center text-muted-foreground font-semibold pb-2 px-3">M+12</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {[...cohortData.cohorts].reverse().map(row => (
+                    <tr key={row.cohort} className="hover:bg-muted/30">
+                      <td className="py-1.5 pr-4 text-foreground font-semibold">{formatMonth(row.cohort)}</td>
+                      <td className="py-1.5 px-3 text-center text-muted-foreground">{row.size}</td>
+                      {([row.m1, row.m3, row.m6, row.m12] as (number | null)[]).map((pct, i) => (
+                        <td key={i} className="py-1.5 px-3 text-center">
+                          {pct === null ? (
+                            <span className="text-muted-foreground/40">—</span>
+                          ) : (
+                            <span className="inline-block rounded px-2 py-0.5 font-semibold"
+                              style={{ backgroundColor: retentionBg(pct), color: retentionText(pct) }}>
+                              {pct}%
+                            </span>
+                          )}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <p className="mt-3 text-xs text-muted-foreground">
+                % of members still active at 1, 3, 6, and 12 months after their join month. — means not enough time has passed.
+              </p>
+            </div>
+          )}
         </CardContent>
       </Card>
 

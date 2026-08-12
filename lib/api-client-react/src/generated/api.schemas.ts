@@ -29,6 +29,8 @@ export interface ClientSummary {
   /** @nullable */
   email?: string | null;
   /** @nullable */
+  phone?: string | null;
+  /** @nullable */
   photoUrl?: string | null;
   /** @nullable */
   goals?: string | null;
@@ -301,6 +303,31 @@ export interface MembershipDrilldown {
   month: string;
   category: string;
   members: MembershipDrilldownMember[];
+}
+
+export interface AttendanceHeatmapRow {
+  className: string;
+  /** 0=Sunday, 1=Monday, ..., 6=Saturday */
+  dayOfWeek: number;
+  avgAttendance: number;
+  totalSessions: number;
+}
+
+export interface CohortRow {
+  cohort: string;
+  size: number;
+  /** @nullable */
+  m1: number | null;
+  /** @nullable */
+  m3: number | null;
+  /** @nullable */
+  m6: number | null;
+  /** @nullable */
+  m12: number | null;
+}
+
+export interface CohortRetentionReport {
+  cohorts: CohortRow[];
 }
 
 export type ListClientsParams = {

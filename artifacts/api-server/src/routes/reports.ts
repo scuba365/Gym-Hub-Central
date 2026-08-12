@@ -2,8 +2,8 @@ import { Router } from "express";
 import { GOTEAMUP_BASE, PAGE_SIZE, goteamupFetch, goteamupFetchAll } from "../lib/goteamup";
 import { logger } from "../lib/logger";
 import { db } from "@workspace/db";
-import { clientsTable } from "@workspace/db";
-import { inArray } from "drizzle-orm";
+import { clientsTable, attendanceRecordsTable } from "@workspace/db";
+import { inArray, sql } from "drizzle-orm";
 
 const router = Router();
 
@@ -388,6 +388,101 @@ router.get("/reports/membership/drilldown", async (req, res) => {
   } catch (err) {
     logger.error({ err }, "Reports: drilldown failed");
     return res.status(500).json({ error: (err as Error).message || "Drilldown failed" });
+  }
+});
+
+// GET /reports/attendance-heatmap
+router.get("/reports/attendance-heatmap", async (req, res) => {
+  try {
+    const rows = await db.execute(sql`
+      SELECT
+        class_name AS "className",
+        EXTRACT(DOW FROM date::date)::integer AS "dayOfWeek",
+        COUNT(*)::integer AS "totalBookings",
+        COUNT(DISTINCT date)::integer AS "totalSessions"
+      FROM attendance_records
+      WHERE class_name IS NOT NULL AND class_name != ''
+      GROUP BY class_name, EXTRACT(DOW FROM date::date)
+      ORDER BY class_name, EXTRACT(DOW FROM date::date)
+    `);
+
+    const result = (rows.rows as any[]).map(r => ({
+      className: String(r.className),
+      dayOfWeek: Number(r.dayOfWeek),
+      totalSessions: Number(r.totalSessions),
+      avgAttendance: Math.round((Number(r.totalBookings) / Number(r.totalSessions)) * 10) / 10,
+    }));
+
+    logger.info({ count: result.length }, "Reports: attendance heatmap");
+    return res.json(result);
+  } catch (err) {
+    logger.error({ err }, "Reports: attendance heatmap failed");
+    return res.status(500).json({ error: "Failed to fetch attendance heatmap" });
+  }
+});
+
+// GET /reports/cohort-retention
+router.get("/reports/cohort-retention", async (req, res) => {
+  const token = process.env.TEAMUP_M2M_TOKEN;
+  if (!token) {
+    return res.status(503).json({ error: "TeamUp credentials not configured (TEAMUP_M2M_TOKEN)" });
+  }
+
+  try {
+    const memberships = await getMemberships(token);
+
+    // Find each customer's earliest membership start date
+    const customerFirstJoin = new Map<number, Date>();
+    for (const mem of memberships) {
+      if (!mem.start_date) continue;
+      const d = new Date(mem.start_date);
+      if (isNaN(d.getTime())) continue;
+      const existing = customerFirstJoin.get(mem.customer);
+      if (!existing || d < existing) customerFirstJoin.set(mem.customer, d);
+    }
+
+    // Group customers into cohort months
+    const cohortMap = new Map<string, number[]>();
+    for (const [customerId, joinDate] of customerFirstJoin.entries()) {
+      const key = monthKey(joinDate);
+      if (!cohortMap.has(key)) cohortMap.set(key, []);
+      cohortMap.get(key)!.push(customerId);
+    }
+
+    const isActiveAt = (customerId: number, checkDate: Date): boolean =>
+      memberships.some(mem => {
+        if (mem.customer !== customerId || !mem.start_date) return false;
+        const s = new Date(mem.start_date);
+        if (isNaN(s.getTime()) || s > checkDate) return false;
+        if (!mem.expiration_date) return true;
+        const e = new Date(mem.expiration_date);
+        return !isNaN(e.getTime()) && e >= checkDate;
+      });
+
+    const now = new Date();
+
+    const cohorts = Array.from(cohortMap.keys())
+      .sort()
+      .map(cohortMonth => {
+        const [y, m] = cohortMonth.split("-").map(Number);
+        const customerIds = cohortMap.get(cohortMonth)!;
+        const size = customerIds.length;
+
+        const retentionAt = (months: number): number | null => {
+          const checkDate = new Date(Date.UTC(y, m - 1 + months, 1));
+          if (checkDate > now) return null;
+          const retained = customerIds.filter(id => isActiveAt(id, checkDate)).length;
+          return Math.round((retained / size) * 1000) / 10;
+        };
+
+        return { cohort: cohortMonth, size, m1: retentionAt(1), m3: retentionAt(3), m6: retentionAt(6), m12: retentionAt(12) };
+      });
+
+    logger.info({ cohorts: cohorts.length }, "Reports: cohort retention");
+    return res.json({ cohorts });
+  } catch (err) {
+    logger.error({ err }, "Reports: cohort retention failed");
+    return res.status(500).json({ error: "Failed to compute cohort retention" });
   }
 });
 

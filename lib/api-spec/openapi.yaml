@@ -426,6 +426,40 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /reports/attendance-heatmap:
+    get:
+      operationId: getAttendanceHeatmap
+      tags: [reports]
+      summary: Get attendance counts per class name and day of week
+      responses:
+        "200":
+          description: Attendance heatmap rows
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AttendanceHeatmapRow"
+
+  /reports/cohort-retention:
+    get:
+      operationId: getCohortRetention
+      tags: [reports]
+      summary: Get member cohort retention data from TeamUp
+      responses:
+        "200":
+          description: Cohort retention report
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CohortRetentionReport"
+        "503":
+          description: TeamUp credentials not configured
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /sync:
     post:
       operationId: syncAll
@@ -478,6 +512,8 @@ components:
         name:
           type: string
         email:
+          type: ["string", "null"]
+        phone:
           type: ["string", "null"]
         photoUrl:
           type: ["string", "null"]
@@ -906,3 +942,54 @@ components:
         - month
         - category
         - members
+
+    AttendanceHeatmapRow:
+      type: object
+      properties:
+        className:
+          type: string
+        dayOfWeek:
+          type: integer
+          description: 0=Sunday, 1=Monday, ..., 6=Saturday
+        avgAttendance:
+          type: number
+        totalSessions:
+          type: integer
+      required:
+        - className
+        - dayOfWeek
+        - avgAttendance
+        - totalSessions
+
+    CohortRow:
+      type: object
+      properties:
+        cohort:
+          type: string
+        size:
+          type: integer
+        m1:
+          type: ["number", "null"]
+        m3:
+          type: ["number", "null"]
+        m6:
+          type: ["number", "null"]
+        m12:
+          type: ["number", "null"]
+      required:
+        - cohort
+        - size
+        - m1
+        - m3
+        - m6
+        - m12
+
+    CohortRetentionReport:
+      type: object
+      properties:
+        cohorts:
+          type: array
+          items:
+            $ref: "#/components/schemas/CohortRow"
+      required:
+        - cohorts

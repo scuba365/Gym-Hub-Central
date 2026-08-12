@@ -50,6 +50,7 @@ router.get("/clients", async (req, res) => {
         id: c.id,
         name: c.name,
         email: c.email,
+        phone: c.phone,
         photoUrl: c.photoUrl,
         goals: c.goals,
         needsMealPlan: c.needsMealPlan,

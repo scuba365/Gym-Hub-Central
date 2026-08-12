@@ -21,12 +21,14 @@ import type {
 
 import type {
   AiInsight,
+  AttendanceHeatmapRow,
   AttendanceRecord,
   CheckinDraft,
   CheckinDraftUpdate,
   ClientDetail,
   ClientSummary,
   ClientUpdate,
+  CohortRetentionReport,
   DashboardStats,
   ErrorResponse,
   GetMembershipDrilldownParams,
@@ -1168,6 +1170,160 @@ export function useGetMembershipDrilldown<TData = Awaited<ReturnType<typeof getM
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getGetMembershipDrilldownQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetAttendanceHeatmapUrl = () => {
+
+
+
+
+  return `/api/reports/attendance-heatmap`
+}
+
+/**
+ * @summary Get attendance counts per class name and day of week
+ */
+export const getAttendanceHeatmap = async ( options?: RequestInit): Promise<AttendanceHeatmapRow[]> => {
+
+  return customFetch<AttendanceHeatmapRow[]>(getGetAttendanceHeatmapUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetAttendanceHeatmapQueryKey = () => {
+    return [
+    `/api/reports/attendance-heatmap`
+    ] as const;
+    }
+
+
+export const getGetAttendanceHeatmapQueryOptions = <TData = Awaited<ReturnType<typeof getAttendanceHeatmap>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAttendanceHeatmap>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetAttendanceHeatmapQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getAttendanceHeatmap>>> = ({ signal }) => getAttendanceHeatmap({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getAttendanceHeatmap>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetAttendanceHeatmapQueryResult = NonNullable<Awaited<ReturnType<typeof getAttendanceHeatmap>>>
+export type GetAttendanceHeatmapQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Get attendance counts per class name and day of week
+ */
+
+export function useGetAttendanceHeatmap<TData = Awaited<ReturnType<typeof getAttendanceHeatmap>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAttendanceHeatmap>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetAttendanceHeatmapQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetCohortRetentionUrl = () => {
+
+
+
+
+  return `/api/reports/cohort-retention`
+}
+
+/**
+ * @summary Get member cohort retention data from TeamUp
+ */
+export const getCohortRetention = async ( options?: RequestInit): Promise<CohortRetentionReport> => {
+
+  return customFetch<CohortRetentionReport>(getGetCohortRetentionUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetCohortRetentionQueryKey = () => {
+    return [
+    `/api/reports/cohort-retention`
+    ] as const;
+    }
+
+
+export const getGetCohortRetentionQueryOptions = <TData = Awaited<ReturnType<typeof getCohortRetention>>, TError = ErrorType<ErrorResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getCohortRetention>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetCohortRetentionQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getCohortRetention>>> = ({ signal }) => getCohortRetention({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getCohortRetention>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetCohortRetentionQueryResult = NonNullable<Awaited<ReturnType<typeof getCohortRetention>>>
+export type GetCohortRetentionQueryError = ErrorType<ErrorResponse>
+
+
+/**
+ * @summary Get member cohort retention data from TeamUp
+ */
+
+export function useGetCohortRetention<TData = Awaited<ReturnType<typeof getCohortRetention>>, TError = ErrorType<ErrorResponse>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getCohortRetention>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetCohortRetentionQueryOptions(options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

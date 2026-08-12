@@ -31,6 +31,7 @@ export const ListClientsResponseItem = zod.object({
   "id": zod.number(),
   "name": zod.string(),
   "email": zod.string().nullish(),
+  "phone": zod.string().nullish(),
   "photoUrl": zod.string().nullish(),
   "goals": zod.string().nullish(),
   "needsMealPlan": zod.boolean(),
@@ -144,6 +145,7 @@ export const UpdateClientResponse = zod.object({
   "id": zod.number(),
   "name": zod.string(),
   "email": zod.string().nullish(),
+  "phone": zod.string().nullish(),
   "photoUrl": zod.string().nullish(),
   "goals": zod.string().nullish(),
   "needsMealPlan": zod.boolean(),
@@ -289,6 +291,7 @@ export const GenerateMacroTargetsResponse = zod.object({
   "id": zod.number(),
   "name": zod.string(),
   "email": zod.string().nullish(),
+  "phone": zod.string().nullish(),
   "photoUrl": zod.string().nullish(),
   "goals": zod.string().nullish(),
   "needsMealPlan": zod.boolean(),
@@ -336,6 +339,7 @@ export const UpdateClientMacrosResponse = zod.object({
   "id": zod.number(),
   "name": zod.string(),
   "email": zod.string().nullish(),
+  "phone": zod.string().nullish(),
   "photoUrl": zod.string().nullish(),
   "goals": zod.string().nullish(),
   "needsMealPlan": zod.boolean(),
@@ -410,6 +414,33 @@ export const GetMembershipDrilldownResponse = zod.object({
   "planName": zod.string(),
   "startDate": zod.string().nullable(),
   "expiresOn": zod.string().nullable()
+}))
+})
+
+
+/**
+ * @summary Get attendance counts per class name and day of week
+ */
+export const GetAttendanceHeatmapResponseItem = zod.object({
+  "className": zod.string(),
+  "dayOfWeek": zod.number().describe('0=Sunday, 1=Monday, ..., 6=Saturday'),
+  "avgAttendance": zod.number(),
+  "totalSessions": zod.number()
+})
+export const GetAttendanceHeatmapResponse = zod.array(GetAttendanceHeatmapResponseItem)
+
+
+/**
+ * @summary Get member cohort retention data from TeamUp
+ */
+export const GetCohortRetentionResponse = zod.object({
+  "cohorts": zod.array(zod.object({
+  "cohort": zod.string(),
+  "size": zod.number(),
+  "m1": zod.number().nullable(),
+  "m3": zod.number().nullable(),
+  "m6": zod.number().nullable(),
+  "m12": zod.number().nullable()
 }))
 })
 
