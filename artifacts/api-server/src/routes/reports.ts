@@ -72,29 +72,39 @@ async function getMemberships(token: string): Promise<GoTeamUpMembership[]> {
   return data;
 }
 
-// Fetch plan templates and build planId → price map (fallback if price not on assignment)
-async function getPlanPrices(token: string): Promise<Map<number, number>> {
+interface GoTeamUpSubscription {
+  id: number;
+  customer: number | { id: number; [key: string]: any };
+  [key: string]: any; // capture all fields for logging
+}
+
+// Fetch payment subscriptions and build customer_id → monthly_amount map
+async function getSubscriptionAmounts(token: string): Promise<Map<number, number>> {
   if (planPriceCache && Date.now() - planPriceCache.at < CACHE_MS) {
     return planPriceCache.data;
   }
   try {
-    const plans = await goteamupFetchAll<GoTeamUpMembershipPlan>(
-      `${GOTEAMUP_BASE}/memberships?page_size=${PAGE_SIZE}`,
+    const subs = await goteamupFetchAll<GoTeamUpSubscription>(
+      `${GOTEAMUP_BASE}/payment_subscriptions?page_size=${PAGE_SIZE}`,
       token
     );
-    if (plans.length > 0) {
-      logger.info({ keys: Object.keys(plans[0]), sample: plans[0] }, "Reports: membership plan sample");
+    if (subs.length > 0) {
+      logger.info({ keys: Object.keys(subs[0]), sample: subs[0] }, "Reports: payment_subscription sample");
     }
     const map = new Map<number, number>();
-    for (const p of plans) {
-      const price = typeof p.price === "string" ? parseFloat(p.price) : Number(p.price ?? 0);
-      if (!isNaN(price) && price > 0) map.set(p.id, price);
+    for (const s of subs) {
+      const customerId = typeof s.customer === "object" ? s.customer?.id : s.customer;
+      if (!customerId) continue;
+      // Try every common field name for the amount
+      const raw = s.amount ?? s.billing_amount ?? s.price ?? s.cost ?? s.fee ?? s.total ?? null;
+      const amount = typeof raw === "string" ? parseFloat(raw) : Number(raw ?? 0);
+      if (!isNaN(amount) && amount > 0) map.set(Number(customerId), amount);
     }
-    logger.info({ count: plans.length, withPrice: map.size }, "Reports: fetched plan prices");
+    logger.info({ subscriptions: subs.length, withAmount: map.size }, "Reports: payment subscriptions loaded");
     planPriceCache = { data: map, at: Date.now() };
     return map;
   } catch (err) {
-    logger.warn({ err }, "Reports: could not fetch membership plan prices");
+    logger.warn({ err }, "Reports: payment_subscriptions endpoint failed");
     return new Map();
   }
 }
@@ -242,9 +252,9 @@ router.get("/reports/membership", async (req, res) => {
   }
 
   try {
-    const [memberships, planPrices] = await Promise.all([
+    const [memberships, subscriptionAmounts] = await Promise.all([
       getMemberships(token),
-      getPlanPrices(token),
+      getSubscriptionAmounts(token),
     ]);
 
     // Build 13 months of boundaries: [13 months ago ... current month]
@@ -259,9 +269,9 @@ router.get("/reports/membership", async (req, res) => {
       });
     }
 
-    // Revenue: sum prices of all memberships active in each month.
-    // Priority: (1) price field directly on assignment, (2) nested membership.price,
-    // (3) plan template price lookup by ID.
+    // Revenue: for each month, sum subscription amounts of all active members.
+    // Falls back to direct price fields on the customer_membership record if
+    // no subscription amount is found.
     const revenueForMonth = (mStart: Date, mEnd: Date): number => {
       let total = 0;
       const seen = new Set<number>();
@@ -269,12 +279,8 @@ router.get("/reports/membership", async (req, res) => {
         if (seen.has(mem.customer)) continue;
         if (!isActiveInMonth(mem, mStart, mEnd)) continue;
         seen.add(mem.customer);
-        let price = extractPrice(mem);
-        if (price === 0) {
-          const planId = extractPlanId(mem);
-          if (planId != null) price = planPrices.get(planId) ?? 0;
-        }
-        total += price;
+        const amount = subscriptionAmounts.get(mem.customer) ?? extractPrice(mem);
+        total += amount;
       }
       return Math.round(total * 100) / 100;
     };
