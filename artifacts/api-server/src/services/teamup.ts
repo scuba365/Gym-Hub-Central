@@ -1,6 +1,6 @@
 import { db } from "@workspace/db";
 import { clientsTable, attendanceRecordsTable } from "@workspace/db";
-import { eq, gt } from "drizzle-orm";
+import { eq, gt, sql } from "drizzle-orm";
 import { logger } from "../lib/logger";
 import { GOTEAMUP_BASE, PAGE_SIZE, goteamupFetch, type PaginatedResponse } from "../lib/goteamup";
 
@@ -190,6 +190,16 @@ export async function syncTeamup(): Promise<{ clientsUpdated: number; attendance
         const found = await db.select().from(clientsTable).where(eq(clientsTable.teamupId, teamupId)).limit(1);
         client = found[0];
       }
+      // Name fallback: only use if unambiguous (exactly one match)
+      if (!client) {
+        const normalizedName = name.toLowerCase().trim();
+        const found = await db
+          .select()
+          .from(clientsTable)
+          .where(sql`LOWER(TRIM(${clientsTable.name})) = ${normalizedName}`)
+          .limit(2);
+        if (found.length === 1) client = found[0];
+      }
 
       if (!client) {
         const [newClient] = await db.insert(clientsTable).values({ name, email, phone, teamupId }).returning();
@@ -260,8 +270,12 @@ export async function syncTeamup(): Promise<{ clientsUpdated: number; attendance
       );
     }
 
-    // 6. Recalculate weekly attendance averages for all synced clients
-    await recalculateAttendanceAverages(Array.from(customerDbMap.values()), cutoffStr);
+    // 6. Recalculate weekly attendance averages for ALL clients with attendance records
+    // (not just the ones in this sync window, so name-matched clients get corrected too)
+    const allAttendees = await db
+      .selectDistinct({ clientId: attendanceRecordsTable.clientId })
+      .from(attendanceRecordsTable);
+    await recalculateAttendanceAverages(allAttendees.map((r) => r.clientId), cutoffStr);
   } catch (err) {
     logger.error({ err }, "GoTeamUp sync error");
     throw err;
