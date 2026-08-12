@@ -551,4 +551,19 @@ router.get("/reports/cohort-retention", async (req, res) => {
   }
 });
 
+// GET /reports/debug/business-advisor — probe the TeamUp AI reports list
+router.get("/reports/debug/business-advisor", async (req, res) => {
+  const token = process.env.TEAMUP_M2M_TOKEN;
+  if (!token) return res.status(503).json({ error: "TEAMUP_M2M_TOKEN not set" });
+
+  try {
+    const raw = await goteamupFetch<any>(`${GOTEAMUP_BASE}/ai/business_advisor_reports`, token);
+    logger.info({ raw }, "Reports: business_advisor_reports probe");
+    return res.json(raw);
+  } catch (err) {
+    logger.error({ err }, "Reports: business_advisor_reports probe failed");
+    return res.status(500).json({ error: (err as Error).message });
+  }
+});
+
 export default router;
