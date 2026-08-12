@@ -200,6 +200,31 @@ function getChurnedMemberships(
   });
 }
 
+// GET /reports/debug/teamup — inspect raw API responses to diagnose field names
+router.get("/reports/debug/teamup", async (req, res) => {
+  const token = process.env.TEAMUP_M2M_TOKEN;
+  if (!token) return res.status(503).json({ error: "No token" });
+  try {
+    const [cusRaw, planRaw] = await Promise.all([
+      (async () => {
+        const r = await fetch(`${GOTEAMUP_BASE}/customer_memberships?page_size=3`, {
+          headers: { Authorization: `Token ${token}`, Accept: "application/json" },
+        });
+        return r.json();
+      })(),
+      (async () => {
+        const r = await fetch(`${GOTEAMUP_BASE}/memberships?page_size=3`, {
+          headers: { Authorization: `Token ${token}`, Accept: "application/json" },
+        });
+        return r.json();
+      })(),
+    ]);
+    return res.json({ customer_memberships_sample: cusRaw, memberships_sample: planRaw });
+  } catch (err) {
+    return res.status(500).json({ error: String(err) });
+  }
+});
+
 // GET /reports/membership
 router.get("/reports/membership", async (req, res) => {
   const token = process.env.TEAMUP_M2M_TOKEN;
