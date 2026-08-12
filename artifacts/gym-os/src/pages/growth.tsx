@@ -74,6 +74,12 @@ export default function Growth() {
     ? Math.round((currentMembers / operationalCapacity) * 100)
     : 0;
 
+  const totalWeeklySpaces = weeklySessions * spacesPerSession;
+  const totalWeeklyBookings = currentMembers * avgWeeklyAttendance;
+  const weeklyBookedPct = totalWeeklySpaces > 0
+    ? Math.round((totalWeeklyBookings / totalWeeklySpaces) * 100)
+    : 0;
+
   // 12-month projection
   const projection = useMemo(() => {
     const months = [];
@@ -130,6 +136,29 @@ export default function Growth() {
         <p className="text-muted-foreground text-sm uppercase tracking-widest font-semibold mt-1">
           Revenue & Capacity Projections
         </p>
+      </div>
+
+      {/* Weekly capacity booked banner */}
+      <div className="mb-8 rounded-lg border border-border bg-card/50 px-6 py-5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div>
+          <p className="text-xs uppercase tracking-widest text-muted-foreground font-semibold">Weekly Class Capacity Booked</p>
+          {isLoading ? (
+            <Skeleton className="h-12 w-32 mt-1" />
+          ) : (
+            <div className="flex items-end gap-3 mt-1">
+              <p className={`text-5xl font-display font-bold ${weeklyBookedPct >= 90 ? "text-destructive" : weeklyBookedPct >= 70 ? "text-yellow-500" : "text-primary"}`}>
+                {weeklyBookedPct}%
+              </p>
+              <p className="text-sm text-muted-foreground font-mono pb-1">
+                {Math.round(totalWeeklyBookings)} bookings / {totalWeeklySpaces} spaces
+              </p>
+            </div>
+          )}
+        </div>
+        <div className="text-sm text-muted-foreground font-mono text-right">
+          <p>{currentMembers} members × {avgWeeklyAttendance}x/wk avg</p>
+          <p className="text-xs mt-1">{weeklySessions} sessions × {spacesPerSession} spaces each</p>
+        </div>
       </div>
 
       {/* Inputs */}
