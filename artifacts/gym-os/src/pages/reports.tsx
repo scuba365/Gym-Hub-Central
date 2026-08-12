@@ -28,7 +28,7 @@ import {
   Legend,
   ResponsiveContainer,
 } from "recharts";
-import { ArrowLeft, Users, TrendingUp, Euro } from "lucide-react";
+import { ArrowLeft, Users, TrendingUp, PoundSterling } from "lucide-react";
 
 type DrilldownCategory = "active" | "new" | "churned";
 
@@ -101,9 +101,28 @@ function retentionText(pct: number | null): string {
   return "hsl(var(--destructive))";
 }
 
+function readAvgMembershipValue(): number {
+  try { return JSON.parse(localStorage.getItem("growth.avgMembershipValue") ?? "247") || 247; }
+  catch { return 247; }
+}
+
 export default function Reports() {
   const { data, isLoading, error } = useGetMembershipReport();
   const { data: cohortData, isLoading: cohortLoading } = useGetCohortRetention();
+
+  // GoTeamUp API doesn't expose plan prices — estimate from activeMembers × avg membership value
+  const avgMembershipValue = readAvgMembershipValue();
+  const monthsWithRevenue = React.useMemo(() =>
+    (monthsWithRevenue).map(m => ({
+      ...m,
+      revenue: m.revenue > 0 ? m.revenue : m.activeMembers * avgMembershipValue,
+    })),
+    [data, avgMembershipValue]
+  );
+  const revenueTrailing12m = React.useMemo(() =>
+    monthsWithRevenue.reduce((sum, m) => sum + m.revenue, 0),
+    [monthsWithRevenue]
+  );
   const [drilldown, setDrilldown] = useState<DrilldownState | null>(null);
 
   const drilldownParams = drilldown ?? { month: "", category: "active" as const };
@@ -155,9 +174,9 @@ export default function Reports() {
         />
         <KpiCard
           title="Trailing 12m Revenue"
-          value={data ? `€${data.current.revenueTrailing12m.toLocaleString("en-IE", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}` : undefined}
+          value={data ? `£${revenueTrailing12m.toLocaleString("en-IE", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}` : undefined}
           loading={isLoading}
-          icon={Euro}
+          icon={PoundSterling}
         />
       </div>
 
@@ -174,7 +193,7 @@ export default function Reports() {
             <Skeleton className="h-64 w-full" />
           ) : (
             <ResponsiveContainer width="100%" height={260}>
-              <BarChart data={data?.months ?? []} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
+              <BarChart data={monthsWithRevenue} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
                 <XAxis dataKey="month" stroke="hsl(var(--muted-foreground))" fontSize={11} tickLine={false} axisLine={false} />
                 <YAxis stroke="hsl(var(--muted-foreground))" fontSize={11} tickLine={false} axisLine={false} width={40} />
@@ -198,20 +217,23 @@ export default function Reports() {
       {/* Revenue chart */}
       <Card className="mb-6">
         <CardHeader>
-          <CardTitle className="text-base font-semibold uppercase tracking-wider">Revenue — Last 12 Months (€)</CardTitle>
+          <CardTitle className="text-base font-semibold uppercase tracking-wider">
+            Revenue — Last 12 Months
+            <span className="ml-2 text-xs font-normal text-muted-foreground normal-case">(estimated: {data?.months.every(m => m.revenue === 0) ? `${data.months[0]?.activeMembers ?? "N"} members × £${avgMembershipValue}` : "from TeamUp"})</span>
+          </CardTitle>
         </CardHeader>
         <CardContent>
           {isLoading ? (
             <Skeleton className="h-64 w-full" />
           ) : (
             <ResponsiveContainer width="100%" height={260}>
-              <BarChart data={data?.months ?? []} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
+              <BarChart data={monthsWithRevenue} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
                 <XAxis dataKey="month" stroke="hsl(var(--muted-foreground))" fontSize={11} tickLine={false} axisLine={false} />
                 <YAxis stroke="hsl(var(--muted-foreground))" fontSize={11} tickLine={false} axisLine={false} width={55} tickFormatter={(v) => `€${v}`} />
                 <RechartsTooltip
                   contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }}
-                  formatter={(v: number) => [`€${v.toFixed(2)}`, "Revenue"]}
+                  formatter={(v: number) => [`£${v.toLocaleString("en-IE", { maximumFractionDigits: 0 })}`, "Revenue"]}
                 />
                 <Bar dataKey="revenue" fill="hsl(var(--chart-2))" radius={[4, 4, 0, 0]} />
               </BarChart>
@@ -234,7 +256,7 @@ export default function Reports() {
           ) : (
             <ResponsiveContainer width="100%" height={260}>
               <LineChart
-                data={data?.months ?? []}
+                data={monthsWithRevenue}
                 margin={{ top: 5, right: 20, bottom: 5, left: 0 }}
                 onClick={(chartData) => {
                   const month = chartData?.activePayload?.[0]?.payload?.month;
@@ -276,7 +298,7 @@ export default function Reports() {
             <Skeleton className="h-64 w-full" />
           ) : (
             <ResponsiveContainer width="100%" height={260}>
-              <BarChart data={data?.months ?? []} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
+              <BarChart data={monthsWithRevenue} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
                 <XAxis dataKey="month" stroke="hsl(var(--muted-foreground))" fontSize={11} tickLine={false} axisLine={false} />
                 <YAxis stroke="hsl(var(--muted-foreground))" fontSize={11} tickLine={false} axisLine={false} width={30} />

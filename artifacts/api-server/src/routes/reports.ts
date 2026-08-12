@@ -371,10 +371,6 @@ router.get("/reports/membership", async (req, res) => {
       current: { activeMembers: currentMonth?.activeMembers ?? 0, revenueTrailing12m, momChange },
       membershipBreakdown,
       upcomingExpirations,
-      _debug: {
-        customerMembershipSample: memberships[0] ?? null,
-        planPriceCount: planPrices.size,
-      },
     });
   } catch (err) {
     logger.error({ err }, "Reports: membership report failed");
