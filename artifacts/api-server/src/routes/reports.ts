@@ -10,21 +10,22 @@ const router = Router();
 interface GoTeamUpMembership {
   id: number;
   customer: number;
+  membership: number | null; // plan template ID
   name: string;
   status: string;
   start_date: string | null;
   expiration_date: string | null;
 }
 
-interface GoTeamUpPayment {
+interface GoTeamUpMembershipPlan {
   id: number;
-  amount: string;
-  created_at: string;
-  status: string;
+  name: string;
+  price: string | number | null;
 }
 
-// 10-minute membership cache — shared between main report and drilldown clicks
+// 10-minute caches
 let membershipCache: { data: GoTeamUpMembership[]; at: number } | null = null;
+let planPriceCache: { data: Map<number, number>; at: number } | null = null;
 const CACHE_MS = 10 * 60 * 1000;
 
 async function getMemberships(token: string): Promise<GoTeamUpMembership[]> {
@@ -38,6 +39,30 @@ async function getMemberships(token: string): Promise<GoTeamUpMembership[]> {
   membershipCache = { data, at: Date.now() };
   logger.info({ count: data.length }, "Reports: fetched and cached memberships");
   return data;
+}
+
+// Fetch plan templates and build planId → price map
+async function getPlanPrices(token: string): Promise<Map<number, number>> {
+  if (planPriceCache && Date.now() - planPriceCache.at < CACHE_MS) {
+    return planPriceCache.data;
+  }
+  try {
+    const plans = await goteamupFetchAll<GoTeamUpMembershipPlan>(
+      `${GOTEAMUP_BASE}/memberships?page_size=${PAGE_SIZE}`,
+      token
+    );
+    const map = new Map<number, number>();
+    for (const p of plans) {
+      const price = typeof p.price === "string" ? parseFloat(p.price) : Number(p.price ?? 0);
+      if (!isNaN(price) && price > 0) map.set(p.id, price);
+    }
+    logger.info({ count: plans.length, withPrice: map.size }, "Reports: fetched plan prices");
+    planPriceCache = { data: map, at: Date.now() };
+    return map;
+  } catch (err) {
+    logger.warn({ err }, "Reports: could not fetch membership plan prices");
+    return new Map();
+  }
 }
 
 // Persistent name cache — survives drilldown clicks within the same process lifetime
@@ -183,19 +208,10 @@ router.get("/reports/membership", async (req, res) => {
   }
 
   try {
-    const memberships = await getMemberships(token);
-
-    // Fetch payments — graceful degradation if endpoint unavailable
-    let payments: GoTeamUpPayment[] = [];
-    try {
-      payments = await goteamupFetchAll<GoTeamUpPayment>(
-        `${GOTEAMUP_BASE}/payments?page_size=${PAGE_SIZE}`,
-        token
-      );
-      logger.info({ count: payments.length }, "Reports: fetched payments");
-    } catch (err) {
-      logger.warn({ err }, "Reports: payments endpoint unavailable — revenue will show 0");
-    }
+    const [memberships, planPrices] = await Promise.all([
+      getMemberships(token),
+      getPlanPrices(token),
+    ]);
 
     // Build 13 months of boundaries: [13 months ago ... current month]
     const now = new Date();
@@ -209,16 +225,21 @@ router.get("/reports/membership", async (req, res) => {
       });
     }
 
-    // Pre-index payments by month
-    const paymentsByMonth = new Map<string, number>();
-    for (const p of payments) {
-      if (p.status === "failed" || p.status === "refunded") continue;
-      if (!p.created_at) continue;
-      const d = new Date(p.created_at);
-      if (isNaN(d.getTime())) continue;
-      const key = monthKey(d);
-      paymentsByMonth.set(key, (paymentsByMonth.get(key) ?? 0) + (parseFloat(p.amount) || 0));
-    }
+    // Revenue: sum plan prices of all memberships active in each month.
+    // Uses plan template price (planPrices map) with fallback to 0 for unknown plans.
+    const revenueForMonth = (mStart: Date, mEnd: Date): number => {
+      let total = 0;
+      // Deduplicate by customer — one revenue entry per customer per month
+      const seen = new Set<number>();
+      for (const mem of memberships) {
+        if (seen.has(mem.customer)) continue;
+        if (!isActiveInMonth(mem, mStart, mEnd)) continue;
+        seen.add(mem.customer);
+        const price = mem.membership != null ? (planPrices.get(mem.membership) ?? 0) : 0;
+        total += price;
+      }
+      return Math.round(total * 100) / 100;
+    };
 
     const result = months.slice(1).map((m, idx) => {
       const prevMonth = months[idx];
@@ -249,7 +270,7 @@ router.get("/reports/membership", async (req, res) => {
         newMembers: uniqueCustomers(newMembers),
         churnedMembers: churnedCount,
         churnPct: denominator > 0 ? Math.round((churnedCount / denominator) * 1000) / 10 : 0,
-        revenue: Math.round((paymentsByMonth.get(m.key) ?? 0) * 100) / 100,
+        revenue: revenueForMonth(m.start, m.end),
       };
     });
 
