@@ -22,11 +22,7 @@ import { InBodyImportButton } from "@/components/inbody-import-button";
 import { ClientCard } from "@/components/client-card";
 import {
   Users,
-  Activity,
-  AlertTriangle,
-  UserMinus,
   UtensilsCrossed,
-  Scale,
   BarChart2,
   TrendingUp,
   ChevronRight,
@@ -74,15 +70,17 @@ export default function Dashboard() {
     (mealPlanClients && mealPlanClients.length > 0) ||
     (atRiskClients && atRiskClients.length > 0);
 
+  const activeRate = stats && stats.totalClients > 0
+    ? Math.round((stats.activeClients / stats.totalClients) * 100)
+    : null;
+
   return (
     <div className="container mx-auto p-4 max-w-7xl">
       {/* Header */}
       <header className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
         <div>
-          <h1 className="text-3xl font-display font-bold tracking-tight uppercase">Gym OS</h1>
-          <p className="text-muted-foreground text-sm uppercase tracking-widest font-semibold mt-1">
-            Command Center
-          </p>
+          <p className="text-xs uppercase tracking-widest font-semibold text-muted-foreground mb-1">Command Center</p>
+          <h1 className="text-2xl font-display font-bold tracking-tight uppercase">The Barracks Fitness</h1>
         </div>
         <div className="flex items-start gap-2">
           <Link href="/reports">
@@ -102,51 +100,50 @@ export default function Dashboard() {
         </div>
       </header>
 
-      {/* Stats Bar */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
-        <StatCard
-          title="Total Clients"
+      {/* Stats — Primary row */}
+      <div className="grid grid-cols-3 gap-px bg-border rounded-lg overflow-hidden mb-4">
+        <BigStatCard
+          label="Members"
           value={stats?.totalClients}
-          icon={Users}
           loading={statsLoading}
           onClick={() => { setTab("members"); setStatus("all"); }}
         />
-        <StatCard
-          title="Active"
+        <BigStatCard
+          label="Active in Program"
           value={stats?.activeClients}
-          icon={Activity}
+          sub={activeRate != null ? `${activeRate}% of members` : undefined}
           loading={statsLoading}
           valueClass="text-primary"
           onClick={() => { setTab("members"); setStatus("active"); }}
         />
-        <StatCard
-          title="At Risk"
-          value={stats?.atRiskClients}
-          icon={AlertTriangle}
+        <BigStatCard
+          label="Avg Weekly Classes"
+          value={stats?.avgWeeklyAttendance != null ? stats.avgWeeklyAttendance.toFixed(1) : undefined}
           loading={statsLoading}
-          valueClass="text-yellow-500"
+        />
+      </div>
+
+      {/* Stats — Action row */}
+      <div className="grid grid-cols-3 gap-px bg-border rounded-lg overflow-hidden mb-8">
+        <BigStatCard
+          label="At Risk"
+          value={stats?.atRiskClients}
+          loading={statsLoading}
+          valueClass={stats?.atRiskClients ? "text-yellow-500" : ""}
           onClick={() => { setTab("members"); setStatus("at_risk"); }}
         />
-        <StatCard
-          title="Disengaged"
-          value={stats?.disengagedClients}
-          icon={UserMinus}
-          loading={statsLoading}
-          valueClass="text-destructive"
-          onClick={() => { setTab("members"); setStatus("disengaged"); }}
-        />
-        <StatCard
-          title="Needs Meal Plan"
+        <BigStatCard
+          label="Needs Meal Plan"
           value={stats?.needsMealPlanCount}
-          icon={UtensilsCrossed}
           loading={statsLoading}
+          valueClass={stats?.needsMealPlanCount ? "text-amber-500" : ""}
           onClick={() => { setTab("members"); setMealPlanOnly(true); setStatus("all"); }}
         />
-        <StatCard
-          title="Overdue InBody"
+        <BigStatCard
+          label="Overdue InBody"
           value={stats?.overdueInBodyCount}
-          icon={Scale}
           loading={statsLoading}
+          valueClass={stats?.overdueInBodyCount ? "text-destructive" : ""}
         />
       </div>
 
@@ -335,41 +332,37 @@ function TabButton({ active, onClick, children }: { active: boolean; onClick: ()
   );
 }
 
-function StatCard({
-  title,
+function BigStatCard({
+  label,
   value,
-  icon: Icon,
+  sub,
   loading,
   valueClass = "",
   onClick,
 }: {
-  title: string;
-  value?: number;
-  icon: React.ElementType;
+  label: string;
+  value?: number | string;
+  sub?: string;
   loading: boolean;
   valueClass?: string;
   onClick?: () => void;
 }) {
   return (
-    <Card
-      className={`bg-card/50 border-border/50 transition-colors ${onClick ? "cursor-pointer hover:bg-card hover:border-border" : ""}`}
+    <div
+      className={`bg-card px-6 py-5 flex flex-col gap-1 ${onClick ? "cursor-pointer hover:bg-card/80 transition-colors" : ""}`}
       onClick={onClick}
     >
-      <CardContent className="p-4 flex flex-col justify-between h-full">
-        <div className="flex justify-between items-start mb-2">
-          <span className="text-xs uppercase tracking-wider font-semibold text-muted-foreground">{title}</span>
-          <Icon className="h-4 w-4 text-muted-foreground opacity-50" />
-        </div>
-        <div>
-          {loading ? (
-            <Skeleton className="h-8 w-16" />
-          ) : (
-            <span className={`text-2xl font-display font-bold ${valueClass}`}>
-              {value !== undefined ? value : "-"}
-            </span>
-          )}
-        </div>
-      </CardContent>
-    </Card>
+      <span className="text-xs uppercase tracking-widest font-semibold text-muted-foreground">{label}</span>
+      {loading ? (
+        <Skeleton className="h-10 w-20 mt-1" />
+      ) : (
+        <span className={`text-4xl font-display font-bold leading-none ${valueClass}`}>
+          {value !== undefined && value !== null ? value : "—"}
+        </span>
+      )}
+      {sub && !loading && (
+        <span className="text-xs text-muted-foreground">{sub}</span>
+      )}
+    </div>
   );
 }
