@@ -141,10 +141,16 @@ export default function Growth() {
   }, [projection, operationalCapacity]);
 
   // Combined revenue chart: past actuals (gray) + future projected (primary)
+  // Fall back to activeMembers × avgMembershipValue when GoTeamUp subscription
+  // prices return zero (payment_subscriptions prices not available).
   const combinedRevenueData = useMemo(() => {
     const actuals = (report?.months ?? []).map(m => ({
       label: m.month,
-      actual: m.revenue > 0 ? m.revenue : null,
+      actual: m.revenue > 0
+        ? m.revenue
+        : (m.activeMembers ?? 0) > 0
+          ? (m.activeMembers ?? 0) * avgMembershipValue
+          : null,
       projected: null as number | null,
     }));
     const future = projection.map(p => ({
@@ -153,7 +159,7 @@ export default function Growth() {
       projected: p.revenue,
     }));
     return [...actuals, ...future];
-  }, [report, projection]);
+  }, [report, projection, avgMembershipValue]);
 
   // Heatmap: build className × day grid
   const heatmapGrid = useMemo(() => {
@@ -386,7 +392,7 @@ export default function Growth() {
       <Card className="bg-card/50 border-border/50 mb-6">
         <CardHeader>
           <CardTitle className="text-sm uppercase tracking-widest text-muted-foreground font-semibold">
-            Revenue — Past 12 Months Actual + 12-Month Projection
+            Revenue — Past 12 Months (est. from members × avg fee) + 12-Month Projection
           </CardTitle>
         </CardHeader>
         <CardContent>
