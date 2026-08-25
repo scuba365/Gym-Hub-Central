@@ -731,6 +731,19 @@ const DAY_ORDER = ["monday", "tuesday", "wednesday", "thursday", "friday", "satu
 
 let classAnalyticsCache: { data: unknown; at: number } | null = null;
 
+// GET /reports/class-analytics/debug — raw GoTeamUp response inspection
+router.get("/reports/class-analytics/debug", async (req, res) => {
+  const token = process.env.TEAMUP_M2M_TOKEN;
+  if (!token) return res.status(503).json({ error: "TEAMUP_M2M_TOKEN not set" });
+  try {
+    const url = `${GOTEAMUP_BASE}/reports/classes.grouped/data?format=json&page_size=3&columns=offering_type_name,day_of_week,start_time,average_attendees,count`;
+    const raw = await goteamupFetch(url, token);
+    return res.json(raw);
+  } catch (err) {
+    return res.status(500).json({ error: (err as Error).message });
+  }
+});
+
 // GET /reports/class-analytics
 router.get("/reports/class-analytics", async (req, res) => {
   const token = process.env.TEAMUP_M2M_TOKEN;
