@@ -61,8 +61,11 @@ export default function Growth() {
   const { data: report, isLoading: reportLoading } = useGetMembershipReport();
   const { data: heatmapRows, isLoading: heatmapLoading } = useGetAttendanceHeatmap();
 
-  const [weeklySessions, setWeeklySessions] = useLocalStorage("growth.weeklySessions", 45);
-  const [spacesPerSession, setSpacesPerSession] = useLocalStorage("growth.spacesPerSession", 6);
+  const SGPT_SPACES = 6;
+  const LG_SPACES = 12;
+
+  const [sgptSessions, setSgptSessions] = useLocalStorage("growth.sgptSessions", 15);
+  const [lgSessions, setLgSessions] = useLocalStorage("growth.lgSessions", 30);
   const [avgMembershipValue, setAvgMembershipValue] = useLocalStorage("growth.avgMembershipValue", 247);
 
   const isLoading = statsLoading || reportLoading;
@@ -82,20 +85,34 @@ export default function Growth() {
     return (total / report.months.length) / 100;
   }, [report]);
 
-  const maxCapacity = Math.floor((weeklySessions * spacesPerSession) / avgWeeklyAttendance);
-  const operationalCapacity = Math.floor(maxCapacity * 0.85);
+  // Small Group PT calculations
+  const sgptWeeklySpaces = sgptSessions * SGPT_SPACES;
+  const sgptWeeklyBookings = currentMembers * avgWeeklyAttendance;
+  const sgptBookedPct = sgptWeeklySpaces > 0 ? Math.round((sgptWeeklyBookings / sgptWeeklySpaces) * 100) : 0;
+  const sgptMaxCapacity = Math.floor(sgptWeeklySpaces / avgWeeklyAttendance);
+  const sgptOpCapacity = Math.floor(sgptMaxCapacity * 0.85);
+
+  // Large Group calculations
+  const lgWeeklySpaces = lgSessions * LG_SPACES;
+  const lgWeeklyBookings = currentMembers * avgWeeklyAttendance;
+  const lgBookedPct = lgWeeklySpaces > 0 ? Math.round((lgWeeklyBookings / lgWeeklySpaces) * 100) : 0;
+  const lgMaxCapacity = Math.floor(lgWeeklySpaces / avgWeeklyAttendance);
+  const lgOpCapacity = Math.floor(lgMaxCapacity * 0.85);
+
+  // Combined for revenue projections (use the larger of the two op capacities as ceiling)
+  const combinedOpCapacity = Math.max(sgptOpCapacity, lgOpCapacity);
+  const operationalCapacity = combinedOpCapacity;
+  const maxCapacity = Math.max(sgptMaxCapacity, lgMaxCapacity);
   const monthlyRevenuePotential = operationalCapacity * avgMembershipValue;
   const annualRevenuePotential = monthlyRevenuePotential * 12;
   const currentMonthlyRevenue = currentMembers * avgMembershipValue;
   const growthPlateau = avgChurnRate > 0 ? Math.floor(avgMonthlySignUps / avgChurnRate) : null;
-  const capacityUsedPct = operationalCapacity > 0
-    ? Math.round((currentMembers / operationalCapacity) * 100)
-    : 0;
-  const totalWeeklySpaces = weeklySessions * spacesPerSession;
+  const capacityUsedPct = operationalCapacity > 0 ? Math.round((currentMembers / operationalCapacity) * 100) : 0;
+
+  // Legacy — kept for heatmap compat
+  const spacesPerSession = SGPT_SPACES;
+  const totalWeeklySpaces = sgptWeeklySpaces + lgWeeklySpaces;
   const totalWeeklyBookings = currentMembers * avgWeeklyAttendance;
-  const weeklyBookedPct = totalWeeklySpaces > 0
-    ? Math.round((totalWeeklyBookings / totalWeeklySpaces) * 100)
-    : 0;
 
   // 12-month forward projection
   const projection = useMemo(() => {
@@ -206,26 +223,39 @@ export default function Growth() {
         </p>
       </div>
 
-      {/* Weekly capacity booked banner */}
-      <div className="mb-8 rounded-lg border border-border bg-card/50 px-6 py-5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-        <div>
-          <p className="text-xs uppercase tracking-widest text-muted-foreground font-semibold">Weekly Class Capacity Booked</p>
-          {isLoading ? (
-            <Skeleton className="h-12 w-32 mt-1" />
-          ) : (
-            <div className="flex items-end gap-3 mt-1">
-              <p className={`text-5xl font-display font-bold ${weeklyBookedPct >= 90 ? "text-destructive" : weeklyBookedPct >= 70 ? "text-yellow-500" : "text-primary"}`}>
-                {weeklyBookedPct}%
+      {/* Weekly capacity banners — SGPT and Large Group */}
+      <div className="mb-8 grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="rounded-lg border border-border bg-card/50 px-6 py-5">
+          <p className="text-xs uppercase tracking-widest text-muted-foreground font-semibold mb-2">Small Group PT — Weekly Capacity</p>
+          {isLoading ? <Skeleton className="h-12 w-32" /> : (
+            <div className="flex items-end gap-3">
+              <p className={`text-5xl font-display font-bold ${sgptBookedPct >= 90 ? "text-destructive" : sgptBookedPct >= 70 ? "text-yellow-500" : "text-primary"}`}>
+                {sgptBookedPct}%
               </p>
               <p className="text-sm text-muted-foreground font-mono pb-1">
-                {Math.round(totalWeeklyBookings)} bookings / {totalWeeklySpaces} spaces
+                {Math.round(sgptWeeklyBookings)} bookings / {sgptWeeklySpaces} spaces
               </p>
             </div>
           )}
+          <p className="text-xs text-muted-foreground font-mono mt-2">
+            {sgptSessions} sessions × {SGPT_SPACES} spaces each
+          </p>
         </div>
-        <div className="text-sm text-muted-foreground font-mono text-right">
-          <p>{currentMembers} members × {avgWeeklyAttendance}x/wk avg</p>
-          <p className="text-xs mt-1">{weeklySessions} sessions × {spacesPerSession} spaces each</p>
+        <div className="rounded-lg border border-border bg-card/50 px-6 py-5">
+          <p className="text-xs uppercase tracking-widest text-muted-foreground font-semibold mb-2">Large Group — Weekly Capacity</p>
+          {isLoading ? <Skeleton className="h-12 w-32" /> : (
+            <div className="flex items-end gap-3">
+              <p className={`text-5xl font-display font-bold ${lgBookedPct >= 90 ? "text-destructive" : lgBookedPct >= 70 ? "text-yellow-500" : "text-primary"}`}>
+                {lgBookedPct}%
+              </p>
+              <p className="text-sm text-muted-foreground font-mono pb-1">
+                {Math.round(lgWeeklyBookings)} bookings / {lgWeeklySpaces} spaces
+              </p>
+            </div>
+          )}
+          <p className="text-xs text-muted-foreground font-mono mt-2">
+            {lgSessions} sessions × {LG_SPACES} spaces each
+          </p>
         </div>
       </div>
 
@@ -237,18 +267,24 @@ export default function Growth() {
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="space-y-1.5">
-              <Label className="text-xs uppercase tracking-wider text-muted-foreground">Weekly Sessions</Label>
-              <Input type="number" value={weeklySessions}
-                onChange={e => setWeeklySessions(Number(e.target.value))}
-                className="bg-background border-border font-mono" min={1} />
-              <p className="text-xs text-muted-foreground">How many classes are on your timetable per week</p>
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground">SGPT Sessions / Week</Label>
+              <div className="flex items-center gap-2">
+                <Input type="number" value={sgptSessions}
+                  onChange={e => setSgptSessions(Number(e.target.value))}
+                  className="bg-background border-border font-mono" min={1} />
+                <span className="text-xs text-muted-foreground font-mono whitespace-nowrap">× 6 spaces</span>
+              </div>
+              <p className="text-xs text-muted-foreground">Small Group PT sessions per week</p>
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs uppercase tracking-wider text-muted-foreground">Spaces Per Session</Label>
-              <Input type="number" value={spacesPerSession}
-                onChange={e => setSpacesPerSession(Number(e.target.value))}
-                className="bg-background border-border font-mono" min={1} />
-              <p className="text-xs text-muted-foreground">Maximum capacity of each class</p>
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground">Large Group Sessions / Week</Label>
+              <div className="flex items-center gap-2">
+                <Input type="number" value={lgSessions}
+                  onChange={e => setLgSessions(Number(e.target.value))}
+                  className="bg-background border-border font-mono" min={1} />
+                <span className="text-xs text-muted-foreground font-mono whitespace-nowrap">× 12 spaces</span>
+              </div>
+              <p className="text-xs text-muted-foreground">Hyrox, Engine, S&C, Finisher, etc.</p>
             </div>
             <div className="space-y-1.5">
               <Label className="text-xs uppercase tracking-wider text-muted-foreground">Avg Monthly Membership (£)</Label>
@@ -272,11 +308,30 @@ export default function Growth() {
         </CardContent>
       </Card>
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
-        <KpiCard title="Max Capacity" value={maxCapacity} unit="members" icon={Users} />
-        <KpiCard title="Operational Cap" value={operationalCapacity} unit="members" icon={Target}
-          note="85% fill" highlight={currentMembers >= operationalCapacity * 0.9} />
+      {/* KPI Cards — SGPT */}
+      <div className="mb-3">
+        <p className="text-xs uppercase tracking-widest text-muted-foreground font-semibold mb-2">Small Group PT (Max 6)</p>
+        <div className="grid grid-cols-3 gap-4">
+          <KpiCard title="Max Capacity" value={sgptMaxCapacity} unit="members" icon={Users} />
+          <KpiCard title="Operational Cap" value={sgptOpCapacity} unit="members" icon={Target}
+            note="85% fill" highlight={currentMembers >= sgptOpCapacity * 0.9} />
+          <KpiCard title="Booked %" value={sgptBookedPct} unit="of spaces" icon={Calendar} loading={isLoading} />
+        </div>
+      </div>
+
+      {/* KPI Cards — Large Group */}
+      <div className="mb-6">
+        <p className="text-xs uppercase tracking-widest text-muted-foreground font-semibold mb-2">Large Group (Max 12)</p>
+        <div className="grid grid-cols-3 gap-4">
+          <KpiCard title="Max Capacity" value={lgMaxCapacity} unit="members" icon={Users} />
+          <KpiCard title="Operational Cap" value={lgOpCapacity} unit="members" icon={Target}
+            note="85% fill" highlight={currentMembers >= lgOpCapacity * 0.9} />
+          <KpiCard title="Booked %" value={lgBookedPct} unit="of spaces" icon={Calendar} loading={isLoading} />
+        </div>
+      </div>
+
+      {/* KPI Cards — Combined */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
         <KpiCard title="Current Members" value={currentMembers} unit={`${capacityUsedPct}% full`} icon={Users} loading={isLoading} />
         <KpiCard title="Revenue Now" value={currentMonthlyRevenue} format="currency" icon={PoundSterling} loading={isLoading} />
         <KpiCard title="Revenue Potential" value={monthlyRevenuePotential} format="currency" icon={TrendingUp} valueClass="text-primary" />
