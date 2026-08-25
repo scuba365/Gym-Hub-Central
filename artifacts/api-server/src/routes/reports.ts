@@ -675,21 +675,20 @@ interface GoTeamUpReportResponse {
   rows: unknown[][];
 }
 
-function parseReportRows<T extends Record<string, unknown>>(
-  data: GoTeamUpReportResponse
-): T[] {
-  const keys = data.column_headers.map((h) => h.key);
-  return data.rows.map((row) => {
-    const obj: Record<string, unknown> = {};
-    keys.forEach((k, i) => { obj[k] = row[i]; });
-    return obj as T;
-  });
+interface ClassGroupedRow {
+  start_time: string;
+  day_of_week: string;
+  offering_type?: { name?: string };
+  average_attendees: number;
+  count: number;
+  year?: number;
+  month?: number | string;
 }
 
 async function fetchClassGrouped(
   token: string,
   extraColumns: string[] = []
-): Promise<Record<string, unknown>[]> {
+): Promise<ClassGroupedRow[]> {
   const columns = [
     "offering_type_name",
     "day_of_week",
@@ -699,14 +698,19 @@ async function fetchClassGrouped(
     ...extraColumns,
   ].join(",");
 
-  const all: Record<string, unknown>[] = [];
+  // Only include classes from the last 6 months so historic/retired classes are excluded
+  const sixMonthsAgo = new Date();
+  sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+  const gte = sixMonthsAgo.toISOString();
+
+  const all: ClassGroupedRow[] = [];
   let page = 1;
   while (true) {
     const url =
       `${GOTEAMUP_BASE}/reports/classes.grouped/data` +
-      `?format=json&page_size=100&page=${page}&columns=${columns}`;
+      `?format=json&page_size=100&page=${page}&columns=${columns}&starts_at_gte=${gte}`;
     const data = await goteamupFetch(url, token) as GoTeamUpReportResponse;
-    const rows = parseReportRows<Record<string, unknown>>(data);
+    const rows = data.rows as unknown as ClassGroupedRow[];
     all.push(...rows);
     if (all.length >= data.total || rows.length === 0) break;
     page++;
@@ -749,6 +753,7 @@ router.get("/reports/class-analytics", async (req, res) => {
   const token = process.env.TEAMUP_M2M_TOKEN;
   if (!token) return res.status(503).json({ error: "TEAMUP_M2M_TOKEN not set" });
 
+  classAnalyticsCache = null; // clear on every request until data confirmed correct — remove after first successful test
   if (classAnalyticsCache && Date.now() - classAnalyticsCache.at < CACHE_MS) {
     return res.json(classAnalyticsCache.data);
   }
@@ -762,11 +767,11 @@ router.get("/reports/class-analytics", async (req, res) => {
 
     // Build per-class utilization rows
     const classes = grouped.map((row) => {
-      const name = String(row["offering_type_name"] ?? "");
-      const day = String(row["day_of_week"] ?? "").toLowerCase();
-      const time = String(row["start_time"] ?? "");
-      const avgAttendees = Number(row["average_attendees"] ?? 0);
-      const sessionsCount = Number(row["count"] ?? 0);
+      const name = String(row.offering_type?.name ?? "");
+      const day = String(row.day_of_week ?? "").toLowerCase();
+      const time = String(row.start_time ?? "");
+      const avgAttendees = Number(row.average_attendees ?? 0);
+      const sessionsCount = Number(row.count ?? 0);
       const capacity = getCapacity(name);
       const fillRate = capacity > 0 ? Math.min(avgAttendees / capacity, 1) : 0;
       const growthGap = Math.max(0, capacity - avgAttendees);
@@ -847,12 +852,12 @@ router.get("/reports/class-analytics", async (req, res) => {
     // Monthly trend — group by year+month, avg fill rate
     const trendMap = new Map<string, { totalFill: number; count: number; totalAttendees: number }>();
     for (const row of monthly) {
-      const year = row["year"];
-      const month = String(row["month"] ?? "").padStart(2, "0");
+      const year = row.year;
+      const month = String(row.month ?? "").padStart(2, "0");
       if (!year || !month) continue;
       const key = `${year}-${month}`;
-      const name = String(row["offering_type_name"] ?? "");
-      const avgAttendees = Number(row["average_attendees"] ?? 0);
+      const name = String(row.offering_type?.name ?? "");
+      const avgAttendees = Number(row.average_attendees ?? 0);
       const capacity = getCapacity(name);
       const fillRate = capacity > 0 ? Math.min(avgAttendees / capacity, 1) : 0;
       const t = trendMap.get(key) ?? { totalFill: 0, count: 0, totalAttendees: 0 };
