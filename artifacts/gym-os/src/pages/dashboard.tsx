@@ -89,6 +89,12 @@ export default function Dashboard() {
               Reports
             </Button>
           </Link>
+          <Link href="/class-analytics">
+            <Button variant="outline" size="sm">
+              <BarChart2 className="h-4 w-4 mr-1" />
+              Classes
+            </Button>
+          </Link>
           <Link href="/growth">
             <Button variant="outline" size="sm">
               <TrendingUp className="h-4 w-4 mr-1" />

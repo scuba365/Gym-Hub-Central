@@ -26,6 +26,7 @@ import type {
   AttendanceRecord,
   CheckinDraft,
   CheckinDraftUpdate,
+  ClassAnalyticsReport,
   ClientDetail,
   ClientSummary,
   ClientUpdate,
@@ -1402,6 +1403,83 @@ export function useGetAiInsight<TData = Awaited<ReturnType<typeof getAiInsight>>
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getGetAiInsightQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetClassAnalyticsUrl = () => {
+
+
+
+
+  return `/api/reports/class-analytics`
+}
+
+/**
+ * @summary Get class utilization analytics from GoTeamUp
+ */
+export const getClassAnalytics = async ( options?: RequestInit): Promise<ClassAnalyticsReport> => {
+
+  return customFetch<ClassAnalyticsReport>(getGetClassAnalyticsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetClassAnalyticsQueryKey = () => {
+    return [
+    `/api/reports/class-analytics`
+    ] as const;
+    }
+
+
+export const getGetClassAnalyticsQueryOptions = <TData = Awaited<ReturnType<typeof getClassAnalytics>>, TError = ErrorType<ErrorResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getClassAnalytics>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetClassAnalyticsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getClassAnalytics>>> = ({ signal }) => getClassAnalytics({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getClassAnalytics>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetClassAnalyticsQueryResult = NonNullable<Awaited<ReturnType<typeof getClassAnalytics>>>
+export type GetClassAnalyticsQueryError = ErrorType<ErrorResponse>
+
+
+/**
+ * @summary Get class utilization analytics from GoTeamUp
+ */
+
+export function useGetClassAnalytics<TData = Awaited<ReturnType<typeof getClassAnalytics>>, TError = ErrorType<ErrorResponse>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getClassAnalytics>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetClassAnalyticsQueryOptions(options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

@@ -479,6 +479,25 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /reports/class-analytics:
+    get:
+      operationId: getClassAnalytics
+      tags: [reports]
+      summary: Get class utilization analytics from GoTeamUp
+      responses:
+        "200":
+          description: Class analytics report
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClassAnalyticsReport"
+        "503":
+          description: TeamUp credentials not configured
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /sync:
     post:
       operationId: syncAll
@@ -1049,6 +1068,120 @@ components:
         recommendation:
           type: string
       required: [situation, opportunity, recommendation]
+
+    ClassStatus:
+      type: string
+      enum: [cut, grow, healthy, full]
+
+    ClassUtilization:
+      type: object
+      required: [name, day, time, avgAttendees, capacity, fillRate, fillPct, sessionsCount, growthGap, status]
+      properties:
+        name:
+          type: string
+        day:
+          type: string
+        time:
+          type: string
+        avgAttendees:
+          type: number
+        capacity:
+          type: integer
+        fillRate:
+          type: number
+        fillPct:
+          type: integer
+        sessionsCount:
+          type: integer
+        growthGap:
+          type: number
+        status:
+          $ref: "#/components/schemas/ClassStatus"
+
+    ClassAnalyticsSummary:
+      type: object
+      required: [avgFillPct, totalWeeklyCapacity, totalWeeklyAttendees, weeklyGrowthGap, cutCandidates, fullClasses]
+      properties:
+        avgFillPct:
+          type: integer
+        totalWeeklyCapacity:
+          type: integer
+        totalWeeklyAttendees:
+          type: number
+        weeklyGrowthGap:
+          type: number
+        cutCandidates:
+          type: integer
+        fullClasses:
+          type: integer
+        fullestClass:
+          oneOf:
+            - $ref: "#/components/schemas/ClassUtilization"
+            - type: "null"
+        quietestClass:
+          oneOf:
+            - $ref: "#/components/schemas/ClassUtilization"
+            - type: "null"
+
+    ClassDaySummary:
+      type: object
+      required: [day, avgFillPct, totalAttendees, totalCapacity, classCount]
+      properties:
+        day:
+          type: string
+        avgFillPct:
+          type: integer
+        totalAttendees:
+          type: number
+        totalCapacity:
+          type: integer
+        classCount:
+          type: integer
+
+    ClassTimeSummary:
+      type: object
+      required: [time, avgFillPct, classCount]
+      properties:
+        time:
+          type: string
+        avgFillPct:
+          type: integer
+        classCount:
+          type: integer
+
+    ClassTrendPoint:
+      type: object
+      required: [month, avgFillPct, avgAttendees]
+      properties:
+        month:
+          type: string
+        avgFillPct:
+          type: integer
+        avgAttendees:
+          type: number
+
+    ClassAnalyticsReport:
+      type: object
+      required: [summary, classes, byDay, byTime, trend]
+      properties:
+        summary:
+          $ref: "#/components/schemas/ClassAnalyticsSummary"
+        classes:
+          type: array
+          items:
+            $ref: "#/components/schemas/ClassUtilization"
+        byDay:
+          type: array
+          items:
+            $ref: "#/components/schemas/ClassDaySummary"
+        byTime:
+          type: array
+          items:
+            $ref: "#/components/schemas/ClassTimeSummary"
+        trend:
+          type: array
+          items:
+            $ref: "#/components/schemas/ClassTrendPoint"
 
     AiInsightReport:
       type: object

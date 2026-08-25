@@ -483,6 +483,74 @@ export const GetAiInsightResponse = zod.object({
 
 
 /**
+ * @summary Get class utilization analytics from GoTeamUp
+ */
+export const GetClassAnalyticsResponse = zod.object({
+  "summary": zod.object({
+  "avgFillPct": zod.number(),
+  "totalWeeklyCapacity": zod.number(),
+  "totalWeeklyAttendees": zod.number(),
+  "weeklyGrowthGap": zod.number(),
+  "cutCandidates": zod.number(),
+  "fullClasses": zod.number(),
+  "fullestClass": zod.union([zod.object({
+  "name": zod.string(),
+  "day": zod.string(),
+  "time": zod.string(),
+  "avgAttendees": zod.number(),
+  "capacity": zod.number(),
+  "fillRate": zod.number(),
+  "fillPct": zod.number(),
+  "sessionsCount": zod.number(),
+  "growthGap": zod.number(),
+  "status": zod.enum(['cut', 'grow', 'healthy', 'full'])
+}),zod.null()]).optional(),
+  "quietestClass": zod.union([zod.object({
+  "name": zod.string(),
+  "day": zod.string(),
+  "time": zod.string(),
+  "avgAttendees": zod.number(),
+  "capacity": zod.number(),
+  "fillRate": zod.number(),
+  "fillPct": zod.number(),
+  "sessionsCount": zod.number(),
+  "growthGap": zod.number(),
+  "status": zod.enum(['cut', 'grow', 'healthy', 'full'])
+}),zod.null()]).optional()
+}),
+  "classes": zod.array(zod.object({
+  "name": zod.string(),
+  "day": zod.string(),
+  "time": zod.string(),
+  "avgAttendees": zod.number(),
+  "capacity": zod.number(),
+  "fillRate": zod.number(),
+  "fillPct": zod.number(),
+  "sessionsCount": zod.number(),
+  "growthGap": zod.number(),
+  "status": zod.enum(['cut', 'grow', 'healthy', 'full'])
+})),
+  "byDay": zod.array(zod.object({
+  "day": zod.string(),
+  "avgFillPct": zod.number(),
+  "totalAttendees": zod.number(),
+  "totalCapacity": zod.number(),
+  "classCount": zod.number()
+})),
+  "byTime": zod.array(zod.object({
+  "time": zod.string(),
+  "avgFillPct": zod.number(),
+  "classCount": zod.number()
+})),
+  "trend": zod.array(zod.object({
+  "month": zod.string(),
+  "avgFillPct": zod.number(),
+  "avgAttendees": zod.number()
+}))
+})
+
+
+/**
  * @summary Trigger full data sync from TeamUp, Trainerize, and InBody
  */
 export const SyncAllResponse = zod.object({

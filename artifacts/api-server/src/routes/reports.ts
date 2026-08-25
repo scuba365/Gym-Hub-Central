@@ -667,4 +667,219 @@ router.get("/reports/debug/business-advisor", async (req, res) => {
   }
 });
 
+// ─── Class Analytics ──────────────────────────────────────────────────────────
+
+interface GoTeamUpReportResponse {
+  total: number;
+  column_headers: { key: string; label: string }[];
+  rows: unknown[][];
+}
+
+function parseReportRows<T extends Record<string, unknown>>(
+  data: GoTeamUpReportResponse
+): T[] {
+  const keys = data.column_headers.map((h) => h.key);
+  return data.rows.map((row) => {
+    const obj: Record<string, unknown> = {};
+    keys.forEach((k, i) => { obj[k] = row[i]; });
+    return obj as T;
+  });
+}
+
+async function fetchClassGrouped(
+  token: string,
+  extraColumns: string[] = []
+): Promise<Record<string, unknown>[]> {
+  const columns = [
+    "offering_type_name",
+    "day_of_week",
+    "start_time",
+    "average_attendees",
+    "count",
+    ...extraColumns,
+  ].join(",");
+
+  const all: Record<string, unknown>[] = [];
+  let page = 1;
+  while (true) {
+    const url =
+      `${GOTEAMUP_BASE}/reports/classes.grouped/data` +
+      `?format=json&page_size=100&page=${page}&columns=${columns}`;
+    const data = await goteamupFetch(url, token) as GoTeamUpReportResponse;
+    const rows = parseReportRows<Record<string, unknown>>(data);
+    all.push(...rows);
+    if (all.length >= data.total || rows.length === 0) break;
+    page++;
+  }
+  return all;
+}
+
+function getCapacity(offeringTypeName: string): number {
+  return offeringTypeName.toLowerCase().includes("small") ? 6 : 12;
+}
+
+type ClassStatus = "cut" | "grow" | "healthy" | "full";
+
+function getStatus(fillRate: number): ClassStatus {
+  if (fillRate >= 0.9) return "full";
+  if (fillRate >= 0.7) return "healthy";
+  if (fillRate >= 0.4) return "grow";
+  return "cut";
+}
+
+const DAY_ORDER = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
+
+let classAnalyticsCache: { data: unknown; at: number } | null = null;
+
+// GET /reports/class-analytics
+router.get("/reports/class-analytics", async (req, res) => {
+  const token = process.env.TEAMUP_M2M_TOKEN;
+  if (!token) return res.status(503).json({ error: "TEAMUP_M2M_TOKEN not set" });
+
+  if (classAnalyticsCache && Date.now() - classAnalyticsCache.at < CACHE_MS) {
+    return res.json(classAnalyticsCache.data);
+  }
+
+  try {
+    // Fetch grouped data and monthly trend in parallel
+    const [grouped, monthly] = await Promise.all([
+      fetchClassGrouped(token),
+      fetchClassGrouped(token, ["year", "month"]),
+    ]);
+
+    // Build per-class utilization rows
+    const classes = grouped.map((row) => {
+      const name = String(row["offering_type_name"] ?? "");
+      const day = String(row["day_of_week"] ?? "").toLowerCase();
+      const time = String(row["start_time"] ?? "");
+      const avgAttendees = Number(row["average_attendees"] ?? 0);
+      const sessionsCount = Number(row["count"] ?? 0);
+      const capacity = getCapacity(name);
+      const fillRate = capacity > 0 ? Math.min(avgAttendees / capacity, 1) : 0;
+      const growthGap = Math.max(0, capacity - avgAttendees);
+      return {
+        name,
+        day,
+        time,
+        avgAttendees: Math.round(avgAttendees * 10) / 10,
+        capacity,
+        fillRate: Math.round(fillRate * 1000) / 1000,
+        fillPct: Math.round(fillRate * 100),
+        sessionsCount,
+        growthGap: Math.round(growthGap * 10) / 10,
+        status: getStatus(fillRate),
+      };
+    });
+
+    // Sort: day order then time
+    classes.sort((a, b) => {
+      const di = DAY_ORDER.indexOf(a.day) - DAY_ORDER.indexOf(b.day);
+      return di !== 0 ? di : a.time.localeCompare(b.time);
+    });
+
+    // Summary
+    const avgFillRate = classes.length
+      ? Math.round((classes.reduce((s, c) => s + c.fillRate, 0) / classes.length) * 1000) / 1000
+      : 0;
+    const totalWeeklyCapacity = classes.reduce((s, c) => s + c.capacity, 0);
+    const totalWeeklyAttendees = Math.round(classes.reduce((s, c) => s + c.avgAttendees, 0) * 10) / 10;
+    const weeklyGrowthGap = Math.round((totalWeeklyCapacity - totalWeeklyAttendees) * 10) / 10;
+
+    const sorted = [...classes].sort((a, b) => b.fillRate - a.fillRate);
+    const fullestClass = sorted[0] ?? null;
+    const quietestClass = sorted[sorted.length - 1] ?? null;
+
+    const cutCandidates = classes.filter((c) => c.status === "cut").length;
+    const fullClasses = classes.filter((c) => c.status === "full").length;
+
+    // Aggregate by day
+    const dayMap = new Map<string, { totalFill: number; count: number; totalAttendees: number; totalCapacity: number }>();
+    for (const c of classes) {
+      const d = dayMap.get(c.day) ?? { totalFill: 0, count: 0, totalAttendees: 0, totalCapacity: 0 };
+      d.totalFill += c.fillRate;
+      d.count++;
+      d.totalAttendees += c.avgAttendees;
+      d.totalCapacity += c.capacity;
+      dayMap.set(c.day, d);
+    }
+    const byDay = DAY_ORDER
+      .filter((d) => dayMap.has(d))
+      .map((d) => {
+        const { totalFill, count, totalAttendees, totalCapacity } = dayMap.get(d)!;
+        return {
+          day: d,
+          avgFillPct: Math.round((totalFill / count) * 100),
+          totalAttendees: Math.round(totalAttendees * 10) / 10,
+          totalCapacity,
+          classCount: count,
+        };
+      });
+
+    // Aggregate by time slot
+    const timeMap = new Map<string, { totalFill: number; count: number }>();
+    for (const c of classes) {
+      const t = timeMap.get(c.time) ?? { totalFill: 0, count: 0 };
+      t.totalFill += c.fillRate;
+      t.count++;
+      timeMap.set(c.time, t);
+    }
+    const byTime = Array.from(timeMap.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([time, { totalFill, count }]) => ({
+        time,
+        avgFillPct: Math.round((totalFill / count) * 100),
+        classCount: count,
+      }));
+
+    // Monthly trend — group by year+month, avg fill rate
+    const trendMap = new Map<string, { totalFill: number; count: number; totalAttendees: number }>();
+    for (const row of monthly) {
+      const year = row["year"];
+      const month = String(row["month"] ?? "").padStart(2, "0");
+      if (!year || !month) continue;
+      const key = `${year}-${month}`;
+      const name = String(row["offering_type_name"] ?? "");
+      const avgAttendees = Number(row["average_attendees"] ?? 0);
+      const capacity = getCapacity(name);
+      const fillRate = capacity > 0 ? Math.min(avgAttendees / capacity, 1) : 0;
+      const t = trendMap.get(key) ?? { totalFill: 0, count: 0, totalAttendees: 0 };
+      t.totalFill += fillRate;
+      t.count++;
+      t.totalAttendees += avgAttendees;
+      trendMap.set(key, t);
+    }
+    const trend = Array.from(trendMap.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .slice(-12)
+      .map(([month, { totalFill, count, totalAttendees }]) => ({
+        month,
+        avgFillPct: Math.round((totalFill / count) * 100),
+        avgAttendees: Math.round((totalAttendees / count) * 10) / 10,
+      }));
+
+    const result = {
+      summary: {
+        avgFillPct: Math.round(avgFillRate * 100),
+        totalWeeklyCapacity,
+        totalWeeklyAttendees,
+        weeklyGrowthGap,
+        cutCandidates,
+        fullClasses,
+        fullestClass,
+        quietestClass,
+      },
+      classes,
+      byDay,
+      byTime,
+      trend,
+    };
+
+    classAnalyticsCache = { data: result, at: Date.now() };
+    return res.json(result);
+  } catch (err) {
+    logger.error({ err }, "Reports: class-analytics failed");
+    return res.status(500).json({ error: (err as Error).message });
+  }
+});
+
 export default router;

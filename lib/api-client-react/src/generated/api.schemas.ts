@@ -351,6 +351,68 @@ export interface AiInsightBottomLine {
   recommendation: string;
 }
 
+export type ClassStatus = typeof ClassStatus[keyof typeof ClassStatus];
+
+
+export const ClassStatus = {
+  cut: 'cut',
+  grow: 'grow',
+  healthy: 'healthy',
+  full: 'full',
+} as const;
+
+export interface ClassUtilization {
+  name: string;
+  day: string;
+  time: string;
+  avgAttendees: number;
+  capacity: number;
+  fillRate: number;
+  fillPct: number;
+  sessionsCount: number;
+  growthGap: number;
+  status: ClassStatus;
+}
+
+export interface ClassAnalyticsSummary {
+  avgFillPct: number;
+  totalWeeklyCapacity: number;
+  totalWeeklyAttendees: number;
+  weeklyGrowthGap: number;
+  cutCandidates: number;
+  fullClasses: number;
+  fullestClass?: ClassUtilization | null;
+  quietestClass?: ClassUtilization | null;
+}
+
+export interface ClassDaySummary {
+  day: string;
+  avgFillPct: number;
+  totalAttendees: number;
+  totalCapacity: number;
+  classCount: number;
+}
+
+export interface ClassTimeSummary {
+  time: string;
+  avgFillPct: number;
+  classCount: number;
+}
+
+export interface ClassTrendPoint {
+  month: string;
+  avgFillPct: number;
+  avgAttendees: number;
+}
+
+export interface ClassAnalyticsReport {
+  summary: ClassAnalyticsSummary;
+  classes: ClassUtilization[];
+  byDay: ClassDaySummary[];
+  byTime: ClassTimeSummary[];
+  trend: ClassTrendPoint[];
+}
+
 export interface AiInsightReport {
   reportId: number;
   startDate: string;
