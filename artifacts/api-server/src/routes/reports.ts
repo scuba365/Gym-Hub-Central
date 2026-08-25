@@ -627,6 +627,21 @@ router.get("/reports/ai-insight", async (req, res) => {
   }
 });
 
+// GET /reports/debug/payment-subscriptions — inspect raw subscription shape to find the amount field
+router.get("/reports/debug/payment-subscriptions", async (req, res) => {
+  const token = process.env.TEAMUP_M2M_TOKEN;
+  if (!token) return res.status(503).json({ error: "TEAMUP_M2M_TOKEN not set" });
+  try {
+    const data = await goteamupFetch(
+      `${GOTEAMUP_BASE}/payment_subscriptions?page_size=3&format=json`,
+      token
+    ) as any;
+    return res.json(data);
+  } catch (err) {
+    return res.status(500).json({ error: (err as Error).message });
+  }
+});
+
 // GET /reports/debug/business-advisor — probe TeamUp AI reports: list → latest content → fetch content URI
 router.get("/reports/debug/business-advisor", async (req, res) => {
   const token = process.env.TEAMUP_M2M_TOKEN;
