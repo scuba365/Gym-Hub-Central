@@ -85,16 +85,20 @@ export default function Growth() {
     return (total / report.months.length) / 100;
   }, [report]);
 
+  // Total bookings split proportionally by session count (best estimate without per-format booking data)
+  const totalWeeklyBookings = currentMembers * avgWeeklyAttendance;
+  const totalSessions = sgptSessions + lgSessions;
+
   // Small Group PT calculations
   const sgptWeeklySpaces = sgptSessions * SGPT_SPACES;
-  const sgptWeeklyBookings = currentMembers * avgWeeklyAttendance;
+  const sgptWeeklyBookings = totalSessions > 0 ? totalWeeklyBookings * (sgptSessions / totalSessions) : 0;
   const sgptBookedPct = sgptWeeklySpaces > 0 ? Math.round((sgptWeeklyBookings / sgptWeeklySpaces) * 100) : 0;
   const sgptMaxCapacity = Math.floor(sgptWeeklySpaces / avgWeeklyAttendance);
   const sgptOpCapacity = Math.floor(sgptMaxCapacity * 0.85);
 
   // Large Group calculations
   const lgWeeklySpaces = lgSessions * LG_SPACES;
-  const lgWeeklyBookings = currentMembers * avgWeeklyAttendance;
+  const lgWeeklyBookings = totalSessions > 0 ? totalWeeklyBookings * (lgSessions / totalSessions) : 0;
   const lgBookedPct = lgWeeklySpaces > 0 ? Math.round((lgWeeklyBookings / lgWeeklySpaces) * 100) : 0;
   const lgMaxCapacity = Math.floor(lgWeeklySpaces / avgWeeklyAttendance);
   const lgOpCapacity = Math.floor(lgMaxCapacity * 0.85);
@@ -112,7 +116,6 @@ export default function Growth() {
   // Legacy — kept for heatmap compat
   const spacesPerSession = SGPT_SPACES;
   const totalWeeklySpaces = sgptWeeklySpaces + lgWeeklySpaces;
-  const totalWeeklyBookings = currentMembers * avgWeeklyAttendance;
 
   // 12-month forward projection
   const projection = useMemo(() => {
