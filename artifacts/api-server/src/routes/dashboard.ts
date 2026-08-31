@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
 import { clientsTable, inbodyScansTable } from "@workspace/db";
-import { eq, sql, count } from "drizzle-orm";
+import { eq, sql, count, isNotNull, and } from "drizzle-orm";
 
 const router = Router();
 
@@ -67,6 +67,54 @@ router.get("/dashboard/stats", async (req, res) => {
     });
   } catch (err) {
     res.status(500).json({ error: "Failed to fetch dashboard stats" });
+  }
+});
+
+router.get("/dashboard/birthdays", async (req, res) => {
+  try {
+    const clients = await db
+      .select()
+      .from(clientsTable)
+      .where(and(isNotNull(clientsTable.birthday), eq(clientsTable.isMember, true)));
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const cutoff = new Date(today);
+    cutoff.setDate(cutoff.getDate() + 60);
+
+    const upcoming: {
+      id: number;
+      name: string;
+      birthday: string;
+      birthdayThisYear: string;
+      daysUntil: number;
+      photoUrl: string | null;
+    }[] = [];
+
+    for (const c of clients) {
+      if (!c.birthday) continue;
+      const [, month, day] = c.birthday.split("-").map(Number);
+      for (const yr of [today.getFullYear(), today.getFullYear() + 1]) {
+        const bday = new Date(yr, month - 1, day);
+        if (bday >= today && bday <= cutoff) {
+          const daysUntil = Math.ceil((bday.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+          upcoming.push({
+            id: c.id,
+            name: c.name,
+            birthday: c.birthday,
+            birthdayThisYear: bday.toISOString().split("T")[0],
+            daysUntil,
+            photoUrl: c.photoUrl ?? null,
+          });
+          break;
+        }
+      }
+    }
+
+    upcoming.sort((a, b) => a.daysUntil - b.daysUntil);
+    return res.json(upcoming);
+  } catch (err) {
+    return res.status(500).json({ error: "Failed to fetch birthdays" });
   }
 });
 

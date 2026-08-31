@@ -3,6 +3,7 @@ import { Link } from "wouter";
 import {
   useListClients,
   useGetDashboardStats,
+  useGetDashboardBirthdays,
   ListClientsEngagementStatus
 } from "@workspace/api-client-react";
 import { Card, CardContent } from "@/components/ui/card";
@@ -27,6 +28,8 @@ import {
   TrendingUp,
   ChevronRight,
   MessageCircle,
+  Cake,
+  Gift,
 } from "lucide-react";
 
 function toWhatsAppHref(phone: string | null | undefined): string | null {
@@ -48,6 +51,7 @@ export default function Dashboard() {
   const [mealPlanOnly, setMealPlanOnly] = useState(false);
 
   const { data: stats, isLoading: statsLoading } = useGetDashboardStats();
+  const { data: birthdays } = useGetDashboardBirthdays();
 
   const { data: clients, isLoading: clientsLoading } = useListClients({
     search: search.length > 2 ? search : undefined,
@@ -253,6 +257,57 @@ export default function Dashboard() {
               </div>
             )}
           </div>
+        </div>
+      )}
+
+      {/* Upcoming Birthdays */}
+      {birthdays && birthdays.length > 0 && (
+        <div className="mb-6 rounded-lg border border-border bg-card/30 overflow-hidden">
+          <div className="px-4 py-3 border-b border-border bg-card/50 flex items-center gap-2">
+            <Cake className="h-3.5 w-3.5 text-pink-400" />
+            <span className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+              Upcoming Birthdays
+            </span>
+            <Badge variant="outline" className="text-xs font-mono ml-auto">
+              next 60 days
+            </Badge>
+          </div>
+          <ul className="divide-y divide-border">
+            {birthdays.map((b) => {
+              const isToday = b.daysUntil === 0;
+              const isSoon = b.daysUntil <= 7;
+              const giftQuery = encodeURIComponent(`${b.name} gift idea`);
+              return (
+                <li key={b.id} className="flex items-center gap-3 px-4 py-2.5 hover:bg-card/60 transition-colors">
+                  {b.photoUrl ? (
+                    <img src={b.photoUrl} alt={b.name} className="h-7 w-7 rounded-full object-cover flex-shrink-0" />
+                  ) : (
+                    <div className="h-7 w-7 rounded-full bg-muted flex-shrink-0 flex items-center justify-center text-xs font-semibold text-muted-foreground">
+                      {b.name.charAt(0)}
+                    </div>
+                  )}
+                  <Link href={`/clients/${b.id}`} className="flex-1 min-w-0">
+                    <span className="text-sm font-medium truncate block">{b.name}</span>
+                  </Link>
+                  <span className={`text-xs font-mono flex-shrink-0 ${isToday ? "text-pink-400 font-bold" : isSoon ? "text-amber-400" : "text-muted-foreground"}`}>
+                    {isToday ? "🎂 Today!" : `${b.daysUntil}d`}
+                  </span>
+                  <span className="text-xs text-muted-foreground flex-shrink-0 hidden sm:block">
+                    {new Date(b.birthdayThisYear + "T00:00:00").toLocaleDateString("en-IE", { day: "numeric", month: "short" })}
+                  </span>
+                  <a
+                    href={`https://www.amazon.ie/s?k=${giftQuery}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    title="Find a gift on Amazon"
+                    className="flex-shrink-0 p-1 rounded hover:bg-primary/10 text-muted-foreground hover:text-primary transition-colors"
+                  >
+                    <Gift className="h-3.5 w-3.5" />
+                  </a>
+                </li>
+              );
+            })}
+          </ul>
         </div>
       )}
 

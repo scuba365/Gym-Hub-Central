@@ -40,7 +40,8 @@ import type {
   MacroUpdate,
   MembershipDrilldown,
   MembershipReport,
-  SyncResult
+  SyncResult,
+  UpcomingBirthday
 } from './api.schemas';
 
 import { customFetch } from '../custom-fetch';
@@ -1634,6 +1635,67 @@ export function useGetDashboardStats<TData = Awaited<ReturnType<typeof getDashbo
 }
 
 
+
+
+export const getGetDashboardBirthdaysUrl = () => {
+  return `/api/dashboard/birthdays`
+}
+
+/**
+ * @summary Get upcoming client birthdays (next 60 days)
+ */
+export const getDashboardBirthdays = async ( options?: RequestInit): Promise<UpcomingBirthday[]> => {
+
+  return customFetch<UpcomingBirthday[]>(getGetDashboardBirthdaysUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+export const getGetDashboardBirthdaysQueryKey = () => {
+    return [
+    `/api/dashboard/birthdays`
+    ] as const;
+    }
+
+
+export const getGetDashboardBirthdaysQueryOptions = <TData = Awaited<ReturnType<typeof getDashboardBirthdays>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getDashboardBirthdays>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetDashboardBirthdaysQueryKey();
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getDashboardBirthdays>>> = ({ signal }) => getDashboardBirthdays({ signal, ...requestOptions });
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getDashboardBirthdays>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetDashboardBirthdaysQueryResult = NonNullable<Awaited<ReturnType<typeof getDashboardBirthdays>>>
+export type GetDashboardBirthdaysQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Get upcoming client birthdays (next 60 days)
+ */
+
+export function useGetDashboardBirthdays<TData = Awaited<ReturnType<typeof getDashboardBirthdays>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getDashboardBirthdays>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetDashboardBirthdaysQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
 
 
 

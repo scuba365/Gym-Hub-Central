@@ -57,7 +57,8 @@ export const ListClientsResponseItem = zod.object({
   "macroTargetsUpdatedAt": zod.string().nullish(),
   "macroTargetsRationale": zod.string().nullish(),
   "lastAiInsight": zod.string().nullish(),
-  "lastAiInsightAt": zod.string().nullish()
+  "lastAiInsightAt": zod.string().nullish(),
+  "birthday": zod.string().nullish()
 })
 export const ListClientsResponse = zod.array(ListClientsResponseItem)
 
@@ -99,6 +100,7 @@ export const GetClientResponse = zod.object({
   "macroTargetsRationale": zod.string().nullish(),
   "lastAiInsight": zod.string().nullish(),
   "lastAiInsightAt": zod.string().nullish(),
+  "birthday": zod.string().nullish(),
   "recentScans": zod.array(zod.object({
   "id": zod.number(),
   "clientId": zod.number(),
@@ -139,7 +141,8 @@ export const UpdateClientBody = zod.object({
   "goals": zod.string().nullish(),
   "needsMealPlan": zod.boolean().optional(),
   "isMember": zod.boolean().optional(),
-  "notes": zod.string().nullish()
+  "notes": zod.string().nullish(),
+  "birthday": zod.string().nullish()
 })
 
 export const UpdateClientResponse = zod.object({
@@ -172,7 +175,8 @@ export const UpdateClientResponse = zod.object({
   "macroTargetsUpdatedAt": zod.string().nullish(),
   "macroTargetsRationale": zod.string().nullish(),
   "lastAiInsight": zod.string().nullish(),
-  "lastAiInsightAt": zod.string().nullish()
+  "lastAiInsightAt": zod.string().nullish(),
+  "birthday": zod.string().nullish()
 })
 
 
@@ -318,7 +322,8 @@ export const GenerateMacroTargetsResponse = zod.object({
   "macroTargetsUpdatedAt": zod.string().nullish(),
   "macroTargetsRationale": zod.string().nullish(),
   "lastAiInsight": zod.string().nullish(),
-  "lastAiInsightAt": zod.string().nullish()
+  "lastAiInsightAt": zod.string().nullish(),
+  "birthday": zod.string().nullish()
 })
 
 
@@ -366,7 +371,8 @@ export const UpdateClientMacrosResponse = zod.object({
   "macroTargetsUpdatedAt": zod.string().nullish(),
   "macroTargetsRationale": zod.string().nullish(),
   "lastAiInsight": zod.string().nullish(),
-  "lastAiInsightAt": zod.string().nullish()
+  "lastAiInsightAt": zod.string().nullish(),
+  "birthday": zod.string().nullish()
 })
 
 
@@ -579,5 +585,19 @@ export const GetDashboardStatsResponse = zod.object({
   "lastSyncedAt": zod.string().nullish(),
   "avgWeeklyAttendance": zod.number().nullish()
 })
+
+
+/**
+ * @summary Get upcoming client birthdays (next 60 days)
+ */
+export const GetDashboardBirthdaysResponseItem = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "birthday": zod.string(),
+  "birthdayThisYear": zod.string(),
+  "daysUntil": zod.number(),
+  "photoUrl": zod.string().nullish()
+})
+export const GetDashboardBirthdaysResponse = zod.array(GetDashboardBirthdaysResponseItem)
 
 

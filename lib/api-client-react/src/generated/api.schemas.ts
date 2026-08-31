@@ -79,6 +79,8 @@ export interface ClientSummary {
   lastAiInsight?: string | null;
   /** @nullable */
   lastAiInsightAt?: string | null;
+  /** @nullable */
+  birthday?: string | null;
 }
 
 export type ClientDetailEngagementStatus = typeof ClientDetailEngagementStatus[keyof typeof ClientDetailEngagementStatus];
@@ -173,6 +175,8 @@ export interface ClientDetail {
   lastAiInsight?: string | null;
   /** @nullable */
   lastAiInsightAt?: string | null;
+  /** @nullable */
+  birthday?: string | null;
   recentScans: InBodyScan[];
   recentAttendance: AttendanceRecord[];
 }
@@ -184,6 +188,18 @@ export interface ClientUpdate {
   isMember?: boolean;
   /** @nullable */
   notes?: string | null;
+  /** @nullable */
+  birthday?: string | null;
+}
+
+export interface UpcomingBirthday {
+  id: number;
+  name: string;
+  birthday: string;
+  birthdayThisYear: string;
+  daysUntil: number;
+  /** @nullable */
+  photoUrl?: string | null;
 }
 
 export interface MacroUpdate {

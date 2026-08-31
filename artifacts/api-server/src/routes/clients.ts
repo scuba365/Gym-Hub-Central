@@ -77,6 +77,7 @@ router.get("/clients", async (req, res) => {
         macroTargetsRationale: c.macroTargetsRationale,
         lastAiInsight: c.lastAiInsight,
         lastAiInsightAt: c.lastAiInsightAt,
+        birthday: c.birthday,
       }))
     );
   } catch (err) {
@@ -167,6 +168,7 @@ router.get("/clients/:id", async (req, res) => {
       macroTargetsRationale: client.macroTargetsRationale,
       lastAiInsight: client.lastAiInsight,
       lastAiInsightAt: client.lastAiInsightAt,
+      birthday: client.birthday,
       recentScans: sortedScans,
       recentAttendance: sortedAttendance,
     });
@@ -192,6 +194,7 @@ router.put("/clients/:id", async (req, res) => {
     if (bodyParsed.data.needsMealPlan !== undefined) update.needsMealPlan = bodyParsed.data.needsMealPlan;
     if (bodyParsed.data.isMember !== undefined) update.isMember = bodyParsed.data.isMember;
     if (bodyParsed.data.notes !== undefined) update.notes = bodyParsed.data.notes;
+    if (bodyParsed.data.birthday !== undefined) update.birthday = bodyParsed.data.birthday;
 
     const [updated] = await db
       .update(clientsTable)
@@ -233,6 +236,7 @@ router.put("/clients/:id", async (req, res) => {
       macroTargetsRationale: updated.macroTargetsRationale,
       lastAiInsight: updated.lastAiInsight,
       lastAiInsightAt: updated.lastAiInsightAt,
+      birthday: updated.birthday,
     });
   } catch (err) {
     return res.status(500).json({ error: "Failed to update client" });

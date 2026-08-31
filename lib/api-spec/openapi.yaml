@@ -524,6 +524,21 @@ paths:
               schema:
                 $ref: "#/components/schemas/DashboardStats"
 
+  /dashboard/birthdays:
+    get:
+      operationId: getDashboardBirthdays
+      tags: [dashboard]
+      summary: Get active clients with birthdays in the next 60 days
+      responses:
+        "200":
+          description: Upcoming birthdays
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/UpcomingBirthday"
+
 components:
   schemas:
     HealthStatus:
@@ -606,6 +621,9 @@ components:
           type: ["string", "null"]
         lastAiInsightAt:
           type: ["string", "null"]
+        birthday:
+          type: ["string", "null"]
+          description: Date of birth in YYYY-MM-DD format
       required:
         - id
         - name
@@ -675,6 +693,9 @@ components:
           type: ["string", "null"]
         lastAiInsightAt:
           type: ["string", "null"]
+        birthday:
+          type: ["string", "null"]
+          description: Date of birth in YYYY-MM-DD format
         recentScans:
           type: array
           items:
@@ -703,6 +724,9 @@ components:
           type: boolean
         notes:
           type: ["string", "null"]
+        birthday:
+          type: ["string", "null"]
+          description: Date of birth in YYYY-MM-DD format
 
     MacroUpdate:
       type: object
@@ -864,6 +888,30 @@ components:
         - disengagedClients
         - needsMealPlanCount
         - overdueInBodyCount
+
+    UpcomingBirthday:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        birthday:
+          type: string
+          description: YYYY-MM-DD stored date of birth
+        birthdayThisYear:
+          type: string
+          description: YYYY-MM-DD of the upcoming birthday occurrence
+        daysUntil:
+          type: integer
+        photoUrl:
+          type: ["string", "null"]
+      required:
+        - id
+        - name
+        - birthday
+        - birthdayThisYear
+        - daysUntil
 
     MembershipMonthData:
       type: object

@@ -26,6 +26,7 @@ export const clientsTable = pgTable("clients", {
   proteinTargetG: doublePrecision("protein_target_g"),
   carbsTargetG: doublePrecision("carbs_target_g"),
   fatTargetG: doublePrecision("fat_target_g"),
+  birthday: text("birthday"),
   macroTargetsUpdatedAt: text("macro_targets_updated_at"),
   macroTargetsRationale: text("macro_targets_rationale"),
   lastAiInsight: text("last_ai_insight"),

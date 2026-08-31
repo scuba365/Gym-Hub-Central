@@ -105,6 +105,7 @@ export default function ClientDetail() {
   const [goals, setGoals] = useState("");
   const [notes, setNotes] = useState("");
   const [needsMealPlan, setNeedsMealPlan] = useState(false);
+  const [birthday, setBirthday] = useState("");
   const initialized = useRef(false);
 
   // Macro local state
@@ -122,6 +123,7 @@ export default function ClientDetail() {
       setGoals(client.goals || "");
       setNotes(client.notes || "");
       setNeedsMealPlan(client.needsMealPlan || false);
+      setBirthday(client.birthday || "");
       initialized.current = true;
     }
   }, [client]);
@@ -139,7 +141,7 @@ export default function ClientDetail() {
   const handleSave = () => {
     updateMutation.mutate({
       id,
-      data: { goals, notes, needsMealPlan }
+      data: { goals, notes, needsMealPlan, birthday: birthday || null }
     }, {
       onSuccess: () => {
         toast({ title: "Client Updated", description: "Changes saved successfully." });
@@ -450,6 +452,17 @@ export default function ClientDetail() {
                   id="meal-plan"
                   checked={needsMealPlan}
                   onCheckedChange={setNeedsMealPlan}
+                />
+              </div>
+
+              <div className="space-y-2 pt-2">
+                <Label htmlFor="birthday" className="font-mono text-xs uppercase">Birthday</Label>
+                <Input
+                  id="birthday"
+                  type="date"
+                  value={birthday}
+                  onChange={(e) => setBirthday(e.target.value)}
+                  className="font-mono text-sm bg-background border-border"
                 />
               </div>
 
