@@ -9,6 +9,7 @@ import {
   GetClientScansParams,
   GetClientAttendanceParams,
 } from "@workspace/api-zod";
+import { getAttendanceRiskByClientId } from "../services/attendance-risk";
 
 const router = Router();
 
@@ -44,41 +45,50 @@ router.get("/clients", async (req, res) => {
     }
 
     const clients = await query;
+    const attendanceRisk = await getAttendanceRiskByClientId(clients);
 
     return res.json(
-      clients.map((c) => ({
-        id: c.id,
-        name: c.name,
-        email: c.email,
-        phone: c.phone,
-        photoUrl: c.photoUrl,
-        goals: c.goals,
-        needsMealPlan: c.needsMealPlan,
-        isMember: c.isMember,
-        notes: c.notes,
-        engagementStatus: c.engagementStatus,
-        weeklyAttendanceAvg: c.weeklyAttendanceAvg,
-        lastAttendanceDate: c.lastAttendanceDate,
-        lastTrainingDate: c.lastTrainingDate,
-        workoutCompliancePct: c.workoutCompliancePct,
-        latestScanDate: c.latestScanDate,
-        latestWeight: c.latestWeight,
-        latestBodyFatPct: c.latestBodyFatPct,
-        latestMuscleMass: c.latestMuscleMass,
-        lastSyncedAt: c.lastSyncedAt,
-        teamupId: c.teamupId,
-        trainerizeId: c.trainerizeId,
-        inbodyId: c.inbodyId,
-        dailyCalorieTarget: c.dailyCalorieTarget,
-        proteinTargetG: c.proteinTargetG,
-        carbsTargetG: c.carbsTargetG,
-        fatTargetG: c.fatTargetG,
-        macroTargetsUpdatedAt: c.macroTargetsUpdatedAt,
-        macroTargetsRationale: c.macroTargetsRationale,
-        lastAiInsight: c.lastAiInsight,
-        lastAiInsightAt: c.lastAiInsightAt,
-        birthday: c.birthday,
-      }))
+      clients
+        .map((c) => {
+          const risk = attendanceRisk.get(c.id);
+          return {
+            id: c.id,
+            name: c.name,
+            email: c.email,
+            phone: c.phone,
+            photoUrl: c.photoUrl,
+            goals: c.goals,
+            needsMealPlan: c.needsMealPlan,
+            isMember: c.isMember,
+            notes: c.notes,
+            engagementStatus: c.engagementStatus,
+            weeklyAttendanceAvg: c.weeklyAttendanceAvg,
+            currentWeeklyAttendance: risk?.currentWeeklyAttendance ?? 0,
+            attendanceDropPct: risk?.attendanceDropPct ?? null,
+            needsCheckIn: risk?.needsCheckIn ?? false,
+            lastAttendanceDate: c.lastAttendanceDate,
+            lastTrainingDate: c.lastTrainingDate,
+            workoutCompliancePct: c.workoutCompliancePct,
+            latestScanDate: c.latestScanDate,
+            latestWeight: c.latestWeight,
+            latestBodyFatPct: c.latestBodyFatPct,
+            latestMuscleMass: c.latestMuscleMass,
+            lastSyncedAt: c.lastSyncedAt,
+            teamupId: c.teamupId,
+            trainerizeId: c.trainerizeId,
+            inbodyId: c.inbodyId,
+            dailyCalorieTarget: c.dailyCalorieTarget,
+            proteinTargetG: c.proteinTargetG,
+            carbsTargetG: c.carbsTargetG,
+            fatTargetG: c.fatTargetG,
+            macroTargetsUpdatedAt: c.macroTargetsUpdatedAt,
+            macroTargetsRationale: c.macroTargetsRationale,
+            lastAiInsight: c.lastAiInsight,
+            lastAiInsightAt: c.lastAiInsightAt,
+            birthday: c.birthday,
+          };
+        })
+        .filter((c) => params.needsCheckIn === undefined || c.needsCheckIn === params.needsCheckIn)
     );
   } catch (err) {
     return res.status(500).json({ error: "Failed to fetch clients" });

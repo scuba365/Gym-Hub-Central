@@ -48,3 +48,4 @@ export * from './membershipDrilldownMember';
 export * from './membershipMonthData';
 export * from './membershipReport';
 export * from './syncResult';
+export * from './upcomingBirthday';

@@ -12,4 +12,8 @@ search?: string;
 engagementStatus?: ListClientsEngagementStatus;
 needsMealPlan?: boolean;
 isMember?: boolean;
+/**
+ * Filter to clients whose trailing 7-day attendance is more than 50% below their rolling 4-week average
+ */
+needsCheckIn?: boolean;
 };

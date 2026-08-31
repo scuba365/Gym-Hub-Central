@@ -23,6 +23,15 @@ export interface ClientSummary {
   /** @nullable */
   notes?: string | null;
   engagementStatus: ClientSummaryEngagementStatus;
+  /** Attendance sessions in the 7 calendar days ending at the client's latest sync */
+  currentWeeklyAttendance: number;
+  /**
+     * Percentage by which the latest synced 7-day attendance is below the rolling 4-week average
+     * @nullable
+     */
+  attendanceDropPct: number | null;
+  /** True when the latest synced 7-day attendance is more than 50% below a rolling average of at least 1 session per week */
+  needsCheckIn: boolean;
   /** @nullable */
   weeklyAttendanceAvg?: number | null;
   /** @nullable */
@@ -63,4 +72,9 @@ export interface ClientSummary {
   lastAiInsight?: string | null;
   /** @nullable */
   lastAiInsightAt?: string | null;
+  /**
+     * Date of birth in YYYY-MM-DD format
+     * @nullable
+     */
+  birthday?: string | null;
 }

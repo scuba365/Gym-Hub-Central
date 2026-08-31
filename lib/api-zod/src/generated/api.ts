@@ -24,7 +24,8 @@ export const ListClientsQueryParams = zod.object({
   "search": zod.coerce.string().optional(),
   "engagementStatus": zod.enum(['active', 'at_risk', 'disengaged']).optional(),
   "needsMealPlan": zod.coerce.boolean().optional(),
-  "isMember": zod.coerce.boolean().optional()
+  "isMember": zod.coerce.boolean().optional(),
+  "needsCheckIn": zod.coerce.boolean().optional().describe('Filter to clients whose trailing 7-day attendance is more than 50% below their rolling 4-week average')
 })
 
 export const ListClientsResponseItem = zod.object({
@@ -38,6 +39,9 @@ export const ListClientsResponseItem = zod.object({
   "isMember": zod.boolean(),
   "notes": zod.string().nullish(),
   "engagementStatus": zod.enum(['active', 'at_risk', 'disengaged', 'unknown']),
+  "currentWeeklyAttendance": zod.number().describe('Attendance sessions in the 7 calendar days ending at the client\'s latest sync'),
+  "attendanceDropPct": zod.number().nullable().describe('Percentage by which the latest synced 7-day attendance is below the rolling 4-week average'),
+  "needsCheckIn": zod.boolean().describe('True when the latest synced 7-day attendance is more than 50% below a rolling average of at least 1 session per week'),
   "weeklyAttendanceAvg": zod.number().nullish(),
   "lastAttendanceDate": zod.string().nullish(),
   "lastTrainingDate": zod.string().nullish(),
@@ -58,7 +62,7 @@ export const ListClientsResponseItem = zod.object({
   "macroTargetsRationale": zod.string().nullish(),
   "lastAiInsight": zod.string().nullish(),
   "lastAiInsightAt": zod.string().nullish(),
-  "birthday": zod.string().nullish()
+  "birthday": zod.string().nullish().describe('Date of birth in YYYY-MM-DD format')
 })
 export const ListClientsResponse = zod.array(ListClientsResponseItem)
 
@@ -100,7 +104,7 @@ export const GetClientResponse = zod.object({
   "macroTargetsRationale": zod.string().nullish(),
   "lastAiInsight": zod.string().nullish(),
   "lastAiInsightAt": zod.string().nullish(),
-  "birthday": zod.string().nullish(),
+  "birthday": zod.string().nullish().describe('Date of birth in YYYY-MM-DD format'),
   "recentScans": zod.array(zod.object({
   "id": zod.number(),
   "clientId": zod.number(),
@@ -142,7 +146,7 @@ export const UpdateClientBody = zod.object({
   "needsMealPlan": zod.boolean().optional(),
   "isMember": zod.boolean().optional(),
   "notes": zod.string().nullish(),
-  "birthday": zod.string().nullish()
+  "birthday": zod.string().nullish().describe('Date of birth in YYYY-MM-DD format')
 })
 
 export const UpdateClientResponse = zod.object({
@@ -156,6 +160,9 @@ export const UpdateClientResponse = zod.object({
   "isMember": zod.boolean(),
   "notes": zod.string().nullish(),
   "engagementStatus": zod.enum(['active', 'at_risk', 'disengaged', 'unknown']),
+  "currentWeeklyAttendance": zod.number().describe('Attendance sessions in the 7 calendar days ending at the client\'s latest sync'),
+  "attendanceDropPct": zod.number().nullable().describe('Percentage by which the latest synced 7-day attendance is below the rolling 4-week average'),
+  "needsCheckIn": zod.boolean().describe('True when the latest synced 7-day attendance is more than 50% below a rolling average of at least 1 session per week'),
   "weeklyAttendanceAvg": zod.number().nullish(),
   "lastAttendanceDate": zod.string().nullish(),
   "lastTrainingDate": zod.string().nullish(),
@@ -176,7 +183,7 @@ export const UpdateClientResponse = zod.object({
   "macroTargetsRationale": zod.string().nullish(),
   "lastAiInsight": zod.string().nullish(),
   "lastAiInsightAt": zod.string().nullish(),
-  "birthday": zod.string().nullish()
+  "birthday": zod.string().nullish().describe('Date of birth in YYYY-MM-DD format')
 })
 
 
@@ -303,6 +310,9 @@ export const GenerateMacroTargetsResponse = zod.object({
   "isMember": zod.boolean(),
   "notes": zod.string().nullish(),
   "engagementStatus": zod.enum(['active', 'at_risk', 'disengaged', 'unknown']),
+  "currentWeeklyAttendance": zod.number().describe('Attendance sessions in the 7 calendar days ending at the client\'s latest sync'),
+  "attendanceDropPct": zod.number().nullable().describe('Percentage by which the latest synced 7-day attendance is below the rolling 4-week average'),
+  "needsCheckIn": zod.boolean().describe('True when the latest synced 7-day attendance is more than 50% below a rolling average of at least 1 session per week'),
   "weeklyAttendanceAvg": zod.number().nullish(),
   "lastAttendanceDate": zod.string().nullish(),
   "lastTrainingDate": zod.string().nullish(),
@@ -323,7 +333,7 @@ export const GenerateMacroTargetsResponse = zod.object({
   "macroTargetsRationale": zod.string().nullish(),
   "lastAiInsight": zod.string().nullish(),
   "lastAiInsightAt": zod.string().nullish(),
-  "birthday": zod.string().nullish()
+  "birthday": zod.string().nullish().describe('Date of birth in YYYY-MM-DD format')
 })
 
 
@@ -352,6 +362,9 @@ export const UpdateClientMacrosResponse = zod.object({
   "isMember": zod.boolean(),
   "notes": zod.string().nullish(),
   "engagementStatus": zod.enum(['active', 'at_risk', 'disengaged', 'unknown']),
+  "currentWeeklyAttendance": zod.number().describe('Attendance sessions in the 7 calendar days ending at the client\'s latest sync'),
+  "attendanceDropPct": zod.number().nullable().describe('Percentage by which the latest synced 7-day attendance is below the rolling 4-week average'),
+  "needsCheckIn": zod.boolean().describe('True when the latest synced 7-day attendance is more than 50% below a rolling average of at least 1 session per week'),
   "weeklyAttendanceAvg": zod.number().nullish(),
   "lastAttendanceDate": zod.string().nullish(),
   "lastTrainingDate": zod.string().nullish(),
@@ -372,7 +385,7 @@ export const UpdateClientMacrosResponse = zod.object({
   "macroTargetsRationale": zod.string().nullish(),
   "lastAiInsight": zod.string().nullish(),
   "lastAiInsightAt": zod.string().nullish(),
-  "birthday": zod.string().nullish()
+  "birthday": zod.string().nullish().describe('Date of birth in YYYY-MM-DD format')
 })
 
 
@@ -588,13 +601,13 @@ export const GetDashboardStatsResponse = zod.object({
 
 
 /**
- * @summary Get upcoming client birthdays (next 60 days)
+ * @summary Get active clients with birthdays in the next 60 days
  */
 export const GetDashboardBirthdaysResponseItem = zod.object({
   "id": zod.number(),
   "name": zod.string(),
-  "birthday": zod.string(),
-  "birthdayThisYear": zod.string(),
+  "birthday": zod.string().describe('YYYY-MM-DD stored date of birth'),
+  "birthdayThisYear": zod.string().describe('YYYY-MM-DD of the upcoming birthday occurrence'),
   "daysUntil": zod.number(),
   "photoUrl": zod.string().nullish()
 })

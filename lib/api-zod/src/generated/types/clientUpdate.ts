@@ -13,4 +13,9 @@ export interface ClientUpdate {
   isMember?: boolean;
   /** @nullable */
   notes?: string | null;
+  /**
+     * Date of birth in YYYY-MM-DD format
+     * @nullable
+     */
+  birthday?: string | null;
 }

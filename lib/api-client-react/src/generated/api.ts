@@ -127,13 +127,6 @@ export function useHealthCheck<TData = Awaited<ReturnType<typeof healthCheck>>, 
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
-
-
-
-
-
-
-
 export const getListClientsUrl = (params?: ListClientsParams,) => {
   const normalizedParams = new URLSearchParams();
 
@@ -211,13 +204,6 @@ export function useListClients<TData = Awaited<ReturnType<typeof listClients>>, 
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
-
-
-
-
-
-
-
 export const getGetClientUrl = (id: number,) => {
 
 
@@ -288,13 +274,6 @@ export function useGetClient<TData = Awaited<ReturnType<typeof getClient>>, TErr
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
-
-
-
-
-
-
-
 export const getDeleteClientUrl = (id: number,) => {
 
 
@@ -507,7 +486,6 @@ export function useGetClientScans<TData = Awaited<ReturnType<typeof getClientSca
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
-
 
 
 
@@ -1637,12 +1615,19 @@ export function useGetDashboardStats<TData = Awaited<ReturnType<typeof getDashbo
 
 
 
+
+
+
 export const getGetDashboardBirthdaysUrl = () => {
+
+
+
+
   return `/api/dashboard/birthdays`
 }
 
 /**
- * @summary Get upcoming client birthdays (next 60 days)
+ * @summary Get active clients with birthdays in the next 60 days
  */
 export const getDashboardBirthdays = async ( options?: RequestInit): Promise<UpcomingBirthday[]> => {
 
@@ -1654,6 +1639,7 @@ export const getDashboardBirthdays = async ( options?: RequestInit): Promise<Upc
 
   }
 );}
+
 
 
 
@@ -1672,7 +1658,13 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 
   const queryKey =  queryOptions?.queryKey ?? getGetDashboardBirthdaysQueryKey();
 
+
+
     const queryFn: QueryFunction<Awaited<ReturnType<typeof getDashboardBirthdays>>> = ({ signal }) => getDashboardBirthdays({ signal, ...requestOptions });
+
+
+
+
 
    return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getDashboardBirthdays>>, TError, TData> & { queryKey: QueryKey }
 }
@@ -1682,7 +1674,7 @@ export type GetDashboardBirthdaysQueryError = ErrorType<unknown>
 
 
 /**
- * @summary Get upcoming client birthdays (next 60 days)
+ * @summary Get active clients with birthdays in the next 60 days
  */
 
 export function useGetDashboardBirthdays<TData = Awaited<ReturnType<typeof getDashboardBirthdays>>, TError = ErrorType<unknown>>(
@@ -1696,6 +1688,8 @@ export function useGetDashboardBirthdays<TData = Awaited<ReturnType<typeof getDa
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
+
+
 
 
 

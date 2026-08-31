@@ -63,6 +63,11 @@ export interface ClientDetail {
   lastAiInsight?: string | null;
   /** @nullable */
   lastAiInsightAt?: string | null;
+  /**
+     * Date of birth in YYYY-MM-DD format
+     * @nullable
+     */
+  birthday?: string | null;
   recentScans: InBodyScan[];
   recentAttendance: AttendanceRecord[];
 }

@@ -2,12 +2,14 @@ import { Router } from "express";
 import { db } from "@workspace/db";
 import { clientsTable, inbodyScansTable } from "@workspace/db";
 import { eq, sql, count, isNotNull, and } from "drizzle-orm";
+import { getAttendanceRiskByClientId } from "../services/attendance-risk";
 
 const router = Router();
 
 router.get("/dashboard/stats", async (req, res) => {
   try {
     const clients = await db.select().from(clientsTable);
+    const attendanceRisk = await getAttendanceRiskByClientId(clients);
 
     const now = new Date();
     const ninetyDaysAgo = new Date();
@@ -25,8 +27,9 @@ router.get("/dashboard/stats", async (req, res) => {
 
     for (const c of clients) {
       if (c.engagementStatus === "active") activeClients++;
-      else if (c.engagementStatus === "at_risk") atRiskClients++;
       else if (c.engagementStatus === "disengaged") disengagedClients++;
+
+      if (attendanceRisk.get(c.id)?.needsCheckIn) atRiskClients++;
 
       if (c.needsMealPlan) needsMealPlanCount++;
 

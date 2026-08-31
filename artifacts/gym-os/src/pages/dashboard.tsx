@@ -49,6 +49,7 @@ export default function Dashboard() {
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<string>("all");
   const [mealPlanOnly, setMealPlanOnly] = useState(false);
+  const [needsCheckInOnly, setNeedsCheckInOnly] = useState(false);
 
   const { data: stats, isLoading: statsLoading } = useGetDashboardStats();
   const { data: birthdays } = useGetDashboardBirthdays();
@@ -57,17 +58,16 @@ export default function Dashboard() {
     search: search.length > 2 ? search : undefined,
     engagementStatus: status !== "all" ? status as ListClientsEngagementStatus : undefined,
     needsMealPlan: mealPlanOnly ? true : undefined,
+    needsCheckIn: needsCheckInOnly ? true : undefined,
     isMember: tab === "members" ? true : false,
   });
 
   // Action item queries — only for members tab
   const { data: mealPlanClients } = useListClients(
-    { needsMealPlan: true, isMember: true },
-    { query: { enabled: tab === "members" } }
+    { needsMealPlan: true, isMember: true }
   );
   const { data: atRiskClients } = useListClients(
-    { engagementStatus: "at_risk" as ListClientsEngagementStatus, isMember: true },
-    { query: { enabled: tab === "members" } }
+    { needsCheckIn: true, isMember: true }
   );
 
   const hasActionItems =
@@ -136,18 +136,19 @@ export default function Dashboard() {
       {/* Stats — Action row */}
       <div className="grid grid-cols-3 gap-px bg-border rounded-lg overflow-hidden mb-8">
         <BigStatCard
-          label="At Risk"
+          label="Needs Check-in"
           value={stats?.atRiskClients}
+          sub=">50% below 4-week attendance avg"
           loading={statsLoading}
           valueClass={stats?.atRiskClients ? "text-yellow-500" : ""}
-          onClick={() => { setTab("members"); setStatus("at_risk"); }}
+          onClick={() => { setTab("members"); setStatus("all"); setNeedsCheckInOnly(true); setMealPlanOnly(false); }}
         />
         <BigStatCard
           label="Needs Meal Plan"
           value={stats?.needsMealPlanCount}
           loading={statsLoading}
           valueClass={stats?.needsMealPlanCount ? "text-amber-500" : ""}
-          onClick={() => { setTab("members"); setMealPlanOnly(true); setStatus("all"); }}
+          onClick={() => { setTab("members"); setMealPlanOnly(true); setNeedsCheckInOnly(false); setStatus("all"); }}
         />
         <BigStatCard
           label="Overdue InBody"
@@ -159,10 +160,10 @@ export default function Dashboard() {
 
       {/* Tab Nav */}
       <div className="flex items-center gap-1 mb-6 border-b border-border pb-0">
-        <TabButton active={tab === "members"} onClick={() => { setTab("members"); setStatus("all"); setMealPlanOnly(false); setSearch(""); }}>
+        <TabButton active={tab === "members"} onClick={() => { setTab("members"); setStatus("all"); setMealPlanOnly(false); setNeedsCheckInOnly(false); setSearch(""); }}>
           Members
         </TabButton>
-        <TabButton active={tab === "former"} onClick={() => { setTab("former"); setStatus("all"); setMealPlanOnly(false); setSearch(""); }}>
+        <TabButton active={tab === "former"} onClick={() => { setTab("former"); setStatus("all"); setMealPlanOnly(false); setNeedsCheckInOnly(false); setSearch(""); }}>
           Former Members
         </TabButton>
       </div>
@@ -201,7 +202,7 @@ export default function Dashboard() {
                     <li>
                       <button
                         className="w-full px-2 py-1 text-xs text-muted-foreground hover:text-foreground text-left"
-                        onClick={() => { setMealPlanOnly(true); setStatus("all"); }}
+                        onClick={() => { setMealPlanOnly(true); setNeedsCheckInOnly(false); setStatus("all"); }}
                       >
                         + {mealPlanClients.length - 5} more →
                       </button>
@@ -226,8 +227,13 @@ export default function Dashboard() {
                     return (
                       <li key={c.id} className="flex items-center gap-1">
                         <Link href={`/clients/${c.id}`} className="flex-1 min-w-0">
-                          <button className="w-full flex items-center justify-between px-2 py-1.5 rounded hover:bg-yellow-500/10 text-left group transition-colors">
+                          <button className="w-full flex items-center justify-between gap-2 px-2 py-1.5 rounded hover:bg-yellow-500/10 text-left group transition-colors">
                             <span className="text-sm font-medium truncate">{c.name}</span>
+                            {c.attendanceDropPct != null && (
+                              <span className="text-[10px] text-yellow-500 font-mono whitespace-nowrap">
+                                ↓ {c.attendanceDropPct}%
+                              </span>
+                            )}
                             <MessageCircle className="h-3 w-3 text-muted-foreground group-hover:text-yellow-500 flex-shrink-0" />
                           </button>
                         </Link>
@@ -247,7 +253,7 @@ export default function Dashboard() {
                     <li>
                       <button
                         className="w-full px-2 py-1 text-xs text-muted-foreground hover:text-foreground text-left"
-                        onClick={() => { setStatus("at_risk"); }}
+                        onClick={() => { setStatus("all"); setNeedsCheckInOnly(true); setMealPlanOnly(false); }}
                       >
                         + {atRiskClients.length - 5} more →
                       </button>
@@ -324,7 +330,7 @@ export default function Dashboard() {
         {tab === "members" && (
           <>
             <div className="w-full md:w-48">
-              <Select value={status} onValueChange={setStatus}>
+              <Select value={status} onValueChange={(value) => { setStatus(value); setNeedsCheckInOnly(false); }}>
                 <SelectTrigger className="bg-card border-border">
                   <SelectValue placeholder="Filter by status" />
                 </SelectTrigger>
@@ -338,7 +344,10 @@ export default function Dashboard() {
             </div>
             <Button
               variant={mealPlanOnly ? "default" : "outline"}
-              onClick={() => setMealPlanOnly((v) => !v)}
+              onClick={() => {
+                setMealPlanOnly((value) => !value);
+                setNeedsCheckInOnly(false);
+              }}
               className={mealPlanOnly ? "bg-primary text-primary-foreground" : "border-border text-muted-foreground hover:text-foreground"}
             >
               <UtensilsCrossed className="h-4 w-4 mr-2" />

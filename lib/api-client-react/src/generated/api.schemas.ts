@@ -39,6 +39,15 @@ export interface ClientSummary {
   /** @nullable */
   notes?: string | null;
   engagementStatus: ClientSummaryEngagementStatus;
+  /** Attendance sessions in the 7 calendar days ending at the client's latest sync */
+  currentWeeklyAttendance: number;
+  /**
+     * Percentage by which the latest synced 7-day attendance is below the rolling 4-week average
+     * @nullable
+     */
+  attendanceDropPct: number | null;
+  /** True when the latest synced 7-day attendance is more than 50% below a rolling average of at least 1 session per week */
+  needsCheckIn: boolean;
   /** @nullable */
   weeklyAttendanceAvg?: number | null;
   /** @nullable */
@@ -79,7 +88,10 @@ export interface ClientSummary {
   lastAiInsight?: string | null;
   /** @nullable */
   lastAiInsightAt?: string | null;
-  /** @nullable */
+  /**
+     * Date of birth in YYYY-MM-DD format
+     * @nullable
+     */
   birthday?: string | null;
 }
 
@@ -175,7 +187,10 @@ export interface ClientDetail {
   lastAiInsight?: string | null;
   /** @nullable */
   lastAiInsightAt?: string | null;
-  /** @nullable */
+  /**
+     * Date of birth in YYYY-MM-DD format
+     * @nullable
+     */
   birthday?: string | null;
   recentScans: InBodyScan[];
   recentAttendance: AttendanceRecord[];
@@ -188,18 +203,11 @@ export interface ClientUpdate {
   isMember?: boolean;
   /** @nullable */
   notes?: string | null;
-  /** @nullable */
+  /**
+     * Date of birth in YYYY-MM-DD format
+     * @nullable
+     */
   birthday?: string | null;
-}
-
-export interface UpcomingBirthday {
-  id: number;
-  name: string;
-  birthday: string;
-  birthdayThisYear: string;
-  daysUntil: number;
-  /** @nullable */
-  photoUrl?: string | null;
 }
 
 export interface MacroUpdate {
@@ -272,6 +280,18 @@ export interface DashboardStats {
   lastSyncedAt?: string | null;
   /** @nullable */
   avgWeeklyAttendance?: number | null;
+}
+
+export interface UpcomingBirthday {
+  id: number;
+  name: string;
+  /** YYYY-MM-DD stored date of birth */
+  birthday: string;
+  /** YYYY-MM-DD of the upcoming birthday occurrence */
+  birthdayThisYear: string;
+  daysUntil: number;
+  /** @nullable */
+  photoUrl?: string | null;
 }
 
 export interface MembershipMonthData {
@@ -462,6 +482,10 @@ search?: string;
 engagementStatus?: ListClientsEngagementStatus;
 needsMealPlan?: boolean;
 isMember?: boolean;
+/**
+ * Filter to clients whose trailing 7-day attendance is more than 50% below their rolling 4-week average
+ */
+needsCheckIn?: boolean;
 };
 
 export type ListClientsEngagementStatus = typeof ListClientsEngagementStatus[keyof typeof ListClientsEngagementStatus];

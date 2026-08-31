@@ -6,7 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { format, parseISO } from "date-fns";
-import { Activity, Dumbbell, Utensils, CalendarDays, RefreshCw } from "lucide-react";
+import { Activity, Dumbbell, Utensils, CalendarDays, RefreshCw, MessageCircleWarning } from "lucide-react";
 
 export function ClientCard({ client }: { client: ClientSummary }) {
   const queryClient = useQueryClient();
@@ -50,7 +50,7 @@ export function ClientCard({ client }: { client: ClientSummary }) {
 
   return (
     <Link href={`/clients/${client.id}`}>
-      <Card className={`group cursor-pointer hover:border-primary/50 transition-colors duration-200 bg-card ${client.engagementStatus === "disengaged" ? "opacity-75 grayscale-[0.5]" : ""}`}>
+      <Card className={`group cursor-pointer transition-colors duration-200 bg-card ${client.needsCheckIn ? "border-yellow-500/40 hover:border-yellow-500/70" : "hover:border-primary/50"} ${client.engagementStatus === "disengaged" ? "opacity-75 grayscale-[0.5]" : ""}`}>
         <CardContent className="p-5">
           <div className="flex justify-between items-start mb-4">
             <div className="flex items-center gap-3">
@@ -62,13 +62,22 @@ export function ClientCard({ client }: { client: ClientSummary }) {
               </Avatar>
               <div>
                 <h3 className="font-display font-semibold text-foreground tracking-tight">{client.name}</h3>
-                <div className="flex items-center gap-2 mt-1">
+                <div className="flex flex-wrap items-center gap-2 mt-1">
                   <Badge variant="outline" className={`text-[10px] px-1.5 py-0 rounded-sm font-mono ${getStatusColor(client.engagementStatus)}`}>
                     {getStatusLabel(client.engagementStatus)}
                   </Badge>
                   {client.needsMealPlan && (
                     <Badge variant="outline" className="bg-orange-500/10 text-orange-500 border-orange-500/20 text-[10px] px-1.5 py-0 rounded-sm font-mono flex items-center gap-1">
                       <Utensils className="h-3 w-3" /> MEAL PLAN
+                    </Badge>
+                  )}
+                  {client.needsCheckIn && (
+                    <Badge
+                      variant="outline"
+                      className="bg-yellow-500/15 text-yellow-400 border-yellow-500/30 text-[10px] px-1.5 py-0 rounded-sm font-mono flex items-center gap-1"
+                      title={`Attendance is ${client.attendanceDropPct ?? 0}% below the rolling 4-week average`}
+                    >
+                      <MessageCircleWarning className="h-3 w-3" /> NEEDS CHECK-IN
                     </Badge>
                   )}
                 </div>

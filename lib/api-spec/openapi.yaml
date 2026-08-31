@@ -57,6 +57,11 @@ paths:
           in: query
           schema:
             type: boolean
+        - name: needsCheckIn
+          in: query
+          description: Filter to clients whose trailing 7-day attendance is more than 50% below their rolling 4-week average
+          schema:
+            type: boolean
       responses:
         "200":
           description: List of clients
@@ -581,6 +586,15 @@ components:
         engagementStatus:
           type: string
           enum: [active, at_risk, disengaged, unknown]
+        currentWeeklyAttendance:
+          type: number
+          description: Attendance sessions in the 7 calendar days ending at the client's latest sync
+        attendanceDropPct:
+          type: ["number", "null"]
+          description: Percentage by which the latest synced 7-day attendance is below the rolling 4-week average
+        needsCheckIn:
+          type: boolean
+          description: True when the latest synced 7-day attendance is more than 50% below a rolling average of at least 1 session per week
         weeklyAttendanceAvg:
           type: ["number", "null"]
         lastAttendanceDate:
@@ -630,6 +644,9 @@ components:
         - needsMealPlan
         - isMember
         - engagementStatus
+        - currentWeeklyAttendance
+        - attendanceDropPct
+        - needsCheckIn
 
     ClientDetail:
       type: object
