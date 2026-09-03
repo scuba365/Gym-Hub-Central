@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { GOTEAMUP_BASE, PAGE_SIZE, goteamupFetch, goteamupFetchAll } from "../lib/goteamup";
+import { GOTEAMUP_BASE, PAGE_SIZE, goteamupFetch, goteamupFetchAll, type PaginatedResponse } from "../lib/goteamup";
 import { logger } from "../lib/logger";
 import { db } from "@workspace/db";
 import { clientsTable, attendanceRecordsTable } from "@workspace/db";
@@ -114,17 +114,12 @@ async function getSubscriptionAmounts(token: string): Promise<Map<number, number
 interface GoTeamUpInvoice {
   id: number;
   status?: string;
-  // Amount fields — GoTeamUp may use any of these
-  total?: string | number | null;
-  amount?: string | number | null;
-  subtotal?: string | number | null;
-  gross?: string | number | null;
-  // Date fields
-  paid_at?: string | null;
-  payment_date?: string | null;
-  paid_on?: string | null;
-  date?: string | null;
+  is_credit_note?: boolean;
+  due_date?: string | null;
   created_at?: string | null;
+  total_amount_due?: {
+    decimal?: number | string | null;
+  } | null;
   [key: string]: unknown;
 }
 
@@ -135,14 +130,30 @@ async function fetchActualMonthlyRevenue(token: string): Promise<Map<string, num
     return invoiceRevenueCache.data;
   }
 
-  let invoices: GoTeamUpInvoice[] = [];
+  // Only need 14 months of history — fetch newest-first and stop early
+  const cutoff = new Date();
+  cutoff.setMonth(cutoff.getMonth() - 14);
+  const cutoffStr = cutoff.toISOString().split("T")[0];
+
+  const invoices: GoTeamUpInvoice[] = [];
+  let nextUrl: string | null = `${GOTEAMUP_BASE}/invoices?page_size=${PAGE_SIZE}&ordering=-due_date`;
+  let pages = 0;
+
   try {
-    invoices = await goteamupFetchAll<GoTeamUpInvoice>(
-      `${GOTEAMUP_BASE}/invoices?page_size=${PAGE_SIZE}`,
-      token
-    );
+    while (nextUrl && pages < 50) {
+      const data = await goteamupFetch(nextUrl, token) as PaginatedResponse<GoTeamUpInvoice>;
+      let passedCutoff = false;
+      for (const inv of data.results) {
+        const dateStr = inv.due_date ?? inv.created_at;
+        if (dateStr && dateStr < cutoffStr) { passedCutoff = true; continue; }
+        invoices.push(inv);
+      }
+      if (passedCutoff) break; // all remaining pages are older
+      nextUrl = data.next || null;
+      pages++;
+    }
     if (invoices.length > 0) {
-      logger.info({ keys: Object.keys(invoices[0]), sample: invoices[0] }, "Reports: invoice sample");
+      logger.info({ sample: invoices[0] }, "Reports: invoice sample");
     }
   } catch (err) {
     logger.warn({ err }, "Reports: /invoices endpoint failed — revenue will use subscription estimate");
@@ -150,27 +161,22 @@ async function fetchActualMonthlyRevenue(token: string): Promise<Map<string, num
   }
 
   const monthlyRevenue = new Map<string, number>();
-  let skipped = 0;
 
   for (const inv of invoices) {
-    // Accept only paid invoices
+    if (inv.is_credit_note) continue;
     const status = String(inv.status ?? "").toLowerCase();
-    if (status && !["paid", "completed", "settled", ""].includes(status)) {
-      skipped++;
-      continue;
-    }
+    if (!["paid", "completed", "settled"].includes(status)) continue;
 
-    // Resolve payment date — try every common field name
-    const dateStr = inv.paid_at ?? inv.payment_date ?? inv.paid_on ?? inv.date ?? inv.created_at;
+    const dateStr = inv.due_date ?? inv.created_at;
     if (!dateStr) continue;
-    const d = new Date(String(dateStr));
+    const d = new Date(dateStr);
     if (isNaN(d.getTime())) continue;
 
     const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 
-    // Resolve amount — try every common field name
-    const rawAmount = inv.total ?? inv.amount ?? inv.subtotal ?? inv.gross ?? null;
-    const amount = typeof rawAmount === "string" ? parseFloat(rawAmount) : Number(rawAmount ?? 0);
+    // total_amount_due.decimal is the amount in currency units (e.g. 197 = €197)
+    const raw = inv.total_amount_due?.decimal;
+    const amount = typeof raw === "string" ? parseFloat(raw) : Number(raw ?? 0);
     if (isNaN(amount) || amount <= 0) continue;
 
     monthlyRevenue.set(key, (monthlyRevenue.get(key) ?? 0) + amount);
@@ -178,7 +184,7 @@ async function fetchActualMonthlyRevenue(token: string): Promise<Map<string, num
 
   const totalRevenue = [...monthlyRevenue.values()].reduce((a, b) => a + b, 0);
   logger.info(
-    { invoicesTotal: invoices.length, skipped, monthsWithRevenue: monthlyRevenue.size, totalRevenue },
+    { pages, invoicesFetched: invoices.length, monthsWithRevenue: monthlyRevenue.size, totalRevenue },
     "Reports: actual monthly revenue from invoices"
   );
 
