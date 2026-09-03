@@ -8,7 +8,7 @@ const router = Router();
 
 router.get("/dashboard/stats", async (req, res) => {
   try {
-    const clients = await db.select().from(clientsTable);
+    const clients = await db.select().from(clientsTable).where(eq(clientsTable.isMember, true));
     const attendanceRisk = await getAttendanceRiskByClientId(clients);
 
     const now = new Date();
@@ -38,8 +38,7 @@ router.get("/dashboard/stats", async (req, res) => {
         overdueInBodyCount++;
       }
 
-      // Avg weekly attendance across active members only
-      if (c.isMember && c.weeklyAttendanceAvg != null) {
+      if (c.weeklyAttendanceAvg != null) {
         attendanceSum += c.weeklyAttendanceAvg;
         attendanceCount++;
       }
