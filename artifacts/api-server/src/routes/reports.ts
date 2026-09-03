@@ -109,6 +109,85 @@ async function getSubscriptionAmounts(token: string): Promise<Map<number, number
   }
 }
 
+// ─── Actual invoice revenue ────────────────────────────────────────────────────
+
+interface GoTeamUpInvoice {
+  id: number;
+  status?: string;
+  // Amount fields — GoTeamUp may use any of these
+  total?: string | number | null;
+  amount?: string | number | null;
+  subtotal?: string | number | null;
+  gross?: string | number | null;
+  // Date fields
+  paid_at?: string | null;
+  payment_date?: string | null;
+  paid_on?: string | null;
+  date?: string | null;
+  created_at?: string | null;
+  [key: string]: unknown;
+}
+
+let invoiceRevenueCache: { data: Map<string, number>; at: number } | null = null;
+
+async function fetchActualMonthlyRevenue(token: string): Promise<Map<string, number>> {
+  if (invoiceRevenueCache && Date.now() - invoiceRevenueCache.at < CACHE_MS) {
+    return invoiceRevenueCache.data;
+  }
+
+  let invoices: GoTeamUpInvoice[] = [];
+  try {
+    invoices = await goteamupFetchAll<GoTeamUpInvoice>(
+      `${GOTEAMUP_BASE}/invoices?page_size=${PAGE_SIZE}`,
+      token
+    );
+    if (invoices.length > 0) {
+      logger.info({ keys: Object.keys(invoices[0]), sample: invoices[0] }, "Reports: invoice sample");
+    }
+  } catch (err) {
+    logger.warn({ err }, "Reports: /invoices endpoint failed — revenue will use subscription estimate");
+    return new Map();
+  }
+
+  const monthlyRevenue = new Map<string, number>();
+  let skipped = 0;
+
+  for (const inv of invoices) {
+    // Accept only paid invoices
+    const status = String(inv.status ?? "").toLowerCase();
+    if (status && !["paid", "completed", "settled", ""].includes(status)) {
+      skipped++;
+      continue;
+    }
+
+    // Resolve payment date — try every common field name
+    const dateStr = inv.paid_at ?? inv.payment_date ?? inv.paid_on ?? inv.date ?? inv.created_at;
+    if (!dateStr) continue;
+    const d = new Date(String(dateStr));
+    if (isNaN(d.getTime())) continue;
+
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+
+    // Resolve amount — try every common field name
+    const rawAmount = inv.total ?? inv.amount ?? inv.subtotal ?? inv.gross ?? null;
+    const amount = typeof rawAmount === "string" ? parseFloat(rawAmount) : Number(rawAmount ?? 0);
+    if (isNaN(amount) || amount <= 0) continue;
+
+    monthlyRevenue.set(key, (monthlyRevenue.get(key) ?? 0) + amount);
+  }
+
+  const totalRevenue = [...monthlyRevenue.values()].reduce((a, b) => a + b, 0);
+  logger.info(
+    { invoicesTotal: invoices.length, skipped, monthsWithRevenue: monthlyRevenue.size, totalRevenue },
+    "Reports: actual monthly revenue from invoices"
+  );
+
+  invoiceRevenueCache = { data: monthlyRevenue, at: Date.now() };
+  return monthlyRevenue;
+}
+
+// ─── Persistent name cache ────────────────────────────────────────────────────
+
 // Persistent name cache — survives drilldown clicks within the same process lifetime
 const customerNameCache = new Map<number, string>();
 
@@ -252,10 +331,13 @@ router.get("/reports/membership", async (req, res) => {
   }
 
   try {
-    const [memberships, subscriptionAmounts] = await Promise.all([
+    const [memberships, subscriptionAmounts, actualRevenue] = await Promise.all([
       getMemberships(token),
       getSubscriptionAmounts(token),
+      fetchActualMonthlyRevenue(token),
     ]);
+
+    const revenueIsActual = actualRevenue.size > 0;
 
     // Build 13 months of boundaries: [13 months ago ... current month]
     const now = new Date();
@@ -269,10 +351,12 @@ router.get("/reports/membership", async (req, res) => {
       });
     }
 
-    // Revenue: for each month, sum subscription amounts of all active members.
-    // Falls back to direct price fields on the customer_membership record if
-    // no subscription amount is found.
-    const revenueForMonth = (mStart: Date, mEnd: Date): number => {
+    // Revenue: use actual invoice data when available, otherwise fall back to
+    // subscription amounts × active members (estimate).
+    const revenueForMonth = (monthKeyStr: string, mStart: Date, mEnd: Date): number => {
+      if (revenueIsActual) {
+        return Math.round((actualRevenue.get(monthKeyStr) ?? 0) * 100) / 100;
+      }
       let total = 0;
       const seen = new Set<number>();
       for (const mem of memberships) {
@@ -314,7 +398,7 @@ router.get("/reports/membership", async (req, res) => {
         newMembers: uniqueCustomers(newMembers),
         churnedMembers: churnedCount,
         churnPct: denominator > 0 ? Math.round((churnedCount / denominator) * 1000) / 10 : 0,
-        revenue: revenueForMonth(m.start, m.end),
+        revenue: revenueForMonth(m.key, m.start, m.end),
       };
     });
 
@@ -377,6 +461,7 @@ router.get("/reports/membership", async (req, res) => {
       current: { activeMembers: currentMonth?.activeMembers ?? 0, revenueTrailing12m, momChange },
       membershipBreakdown,
       upcomingExpirations,
+      revenueIsActual,
     });
   } catch (err) {
     logger.error({ err }, "Reports: membership report failed");
@@ -623,6 +708,21 @@ router.get("/reports/ai-insight", async (req, res) => {
     return res.json(insight);
   } catch (err) {
     logger.error({ err }, "Reports: ai-insight failed");
+    return res.status(500).json({ error: (err as Error).message });
+  }
+});
+
+// GET /reports/debug/invoices — inspect raw invoice shape to confirm field names for revenue calculation
+router.get("/reports/debug/invoices", async (req, res) => {
+  const token = process.env.TEAMUP_M2M_TOKEN;
+  if (!token) return res.status(503).json({ error: "TEAMUP_M2M_TOKEN not set" });
+  try {
+    const data = await goteamupFetch(
+      `${GOTEAMUP_BASE}/invoices?page_size=5`,
+      token
+    ) as any;
+    return res.json(data);
+  } catch (err) {
     return res.status(500).json({ error: (err as Error).message });
   }
 });

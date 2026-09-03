@@ -392,7 +392,7 @@ export default function Growth() {
       <Card className="bg-card/50 border-border/50 mb-6">
         <CardHeader>
           <CardTitle className="text-sm uppercase tracking-widest text-muted-foreground font-semibold">
-            Revenue — Past 12 Months (est. from members × avg fee) + 12-Month Projection
+            Revenue — Past 12 Months {report?.revenueIsActual ? "(from GoTeamUp invoices)" : "(est. from subscription amounts)"} + 12-Month Projection
           </CardTitle>
         </CardHeader>
         <CardContent>

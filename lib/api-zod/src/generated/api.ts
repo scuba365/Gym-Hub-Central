@@ -415,7 +415,8 @@ export const GetMembershipReportResponse = zod.object({
   "name": zod.string(),
   "planName": zod.string(),
   "expiresOn": zod.string()
-}))
+})),
+  "revenueIsActual": zod.boolean().optional().describe('True when revenue figures come from GoTeamUp invoices; false when estimated from subscription amounts')
 })
 
 

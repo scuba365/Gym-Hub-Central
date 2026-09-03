@@ -15,4 +15,6 @@ export interface MembershipReport {
   current: MembershipCurrent;
   membershipBreakdown: MembershipBreakdownItem[];
   upcomingExpirations: ExpiringMembership[];
+  /** True when revenue figures come from GoTeamUp invoices; false when estimated from subscription amounts */
+  revenueIsActual?: boolean;
 }

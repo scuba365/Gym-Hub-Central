@@ -1041,6 +1041,9 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/ExpiringMembership"
+        revenueIsActual:
+          type: boolean
+          description: True when revenue figures come from GoTeamUp invoices; false when estimated from subscription amounts
       required:
         - months
         - current
