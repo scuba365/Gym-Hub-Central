@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, TrendingUp, Users, PoundSterling, Target, Calendar } from "lucide-react";
+import { ArrowLeft, TrendingUp, Users, Euro, Target, Calendar } from "lucide-react";
 import {
   LineChart,
   Line,
@@ -178,7 +178,7 @@ export default function Growth() {
   }, [heatmapRows, spacesPerSession]);
 
   const fmt = (n: number) =>
-    n >= 1000 ? `£${(n / 1000).toFixed(1)}k` : `£${n.toLocaleString()}`;
+    n >= 1000 ? `€${(n / 1000).toFixed(1)}k` : `€${n.toLocaleString()}`;
 
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (!active || !payload?.length) return null;
@@ -190,7 +190,7 @@ export default function Growth() {
           p.value != null && (
             <p key={p.dataKey} style={{ color: p.color }}>
               {p.name}: {(p.dataKey === "revenue" || p.dataKey === "actual" || p.dataKey === "projected")
-                ? `£${Number(p.value).toLocaleString()}` : p.value}
+                ? `€${Number(p.value).toLocaleString()}` : p.value}
             </p>
           )
         ))}
@@ -207,7 +207,7 @@ export default function Growth() {
         {payload.map((p: any) =>
           p.value != null ? (
             <p key={p.dataKey} style={{ color: p.color }}>
-              {p.name}: £{Number(p.value).toLocaleString()}
+              {p.name}: €{Number(p.value).toLocaleString()}
             </p>
           ) : null
         )}
@@ -296,7 +296,7 @@ export default function Growth() {
               <p className="text-xs text-muted-foreground">Hyrox, Engine, S&C, Finisher, etc.</p>
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs uppercase tracking-wider text-muted-foreground">Avg Monthly Membership (£)</Label>
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground">Avg Monthly Membership (€)</Label>
               <Input type="number" value={avgMembershipValue}
                 onChange={e => setAvgMembershipValue(Number(e.target.value))}
                 className="bg-background border-border font-mono" min={1} />
@@ -342,7 +342,7 @@ export default function Growth() {
       {/* KPI Cards — Combined */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
         <KpiCard title="Current Members" value={currentMembers} unit={`${capacityUsedPct}% full`} icon={Users} loading={isLoading} />
-        <KpiCard title="Revenue Now" value={currentMonthlyRevenue} format="currency" icon={PoundSterling} loading={isLoading} />
+        <KpiCard title="Revenue Now" value={currentMonthlyRevenue} format="currency" icon={Euro} loading={isLoading} />
         <KpiCard title="Revenue Potential" value={monthlyRevenuePotential} format="currency" icon={TrendingUp} valueClass="text-primary" />
         <KpiCard title="Growth Plateau" value={growthPlateau ?? 0} unit="members" icon={Calendar}
           note={monthsToOperationalCapacity ? `Cap in ${monthsToOperationalCapacity}mo` : undefined} />
@@ -352,10 +352,10 @@ export default function Growth() {
       <div className="mb-8 rounded-lg border border-primary/30 bg-primary/5 px-6 py-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-2">
         <div>
           <p className="text-xs uppercase tracking-widest text-muted-foreground font-semibold">Annual Revenue Potential at Operational Capacity</p>
-          <p className="text-4xl font-display font-bold text-primary mt-1">£{annualRevenuePotential.toLocaleString()}</p>
+          <p className="text-4xl font-display font-bold text-primary mt-1">€{annualRevenuePotential.toLocaleString()}</p>
         </div>
         <div className="text-right text-sm text-muted-foreground font-mono">
-          <p>{operationalCapacity} members × £{avgMembershipValue}/mo × 12</p>
+          <p>{operationalCapacity} members × €{avgMembershipValue}/mo × 12</p>
           <p className="text-xs mt-1">{operationalCapacity - currentMembers} more members needed</p>
         </div>
       </div>
@@ -401,7 +401,7 @@ export default function Growth() {
               <BarChart data={combinedRevenueData} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                 <XAxis dataKey="label" tick={{ fontSize: 10, fontFamily: "monospace", fill: "hsl(var(--muted-foreground))" }} interval={1} />
-                <YAxis tickFormatter={v => `£${(v / 1000).toFixed(0)}k`}
+                <YAxis tickFormatter={v => `€${(v / 1000).toFixed(0)}k`}
                   tick={{ fontSize: 11, fontFamily: "monospace", fill: "hsl(var(--muted-foreground))" }} />
                 <RechartsTooltip content={<RevenueTooltip />} />
                 <Legend wrapperStyle={{ fontSize: 11, fontFamily: "monospace" }} />
@@ -488,7 +488,7 @@ function KpiCard({
   loading?: boolean; valueClass?: string; note?: string; highlight?: boolean;
 }) {
   const displayValue = format === "currency"
-    ? value >= 1000 ? `£${(value / 1000).toFixed(1)}k` : `£${value}`
+    ? value >= 1000 ? `€${(value / 1000).toFixed(1)}k` : `€${value}`
     : value.toLocaleString();
 
   return (

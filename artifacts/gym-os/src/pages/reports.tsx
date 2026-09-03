@@ -29,7 +29,7 @@ import {
   Legend,
   ResponsiveContainer,
 } from "recharts";
-import { ArrowLeft, Users, TrendingUp, PoundSterling, Sparkles, CheckCircle2, Zap, Trophy } from "lucide-react";
+import { ArrowLeft, Users, TrendingUp, Euro, Sparkles, CheckCircle2, Zap, Trophy } from "lucide-react";
 
 type DrilldownCategory = "active" | "new" | "churned";
 
@@ -195,7 +195,7 @@ export default function Reports() {
                   {aiInsight.revenueThisMonth != null && (
                     <div className="rounded-lg bg-card border border-border p-2">
                       <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Revenue</p>
-                      <p className="font-mono font-bold text-foreground">£{aiInsight.revenueThisMonth.toLocaleString("en-IE", { maximumFractionDigits: 0 })}</p>
+                      <p className="font-mono font-bold text-foreground">€{aiInsight.revenueThisMonth.toLocaleString("en-IE", { maximumFractionDigits: 0 })}</p>
                     </div>
                   )}
                   {aiInsight.churnRate != null && (
@@ -214,7 +214,7 @@ export default function Reports() {
                     <div className="rounded-lg bg-card border border-border p-2">
                       <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Rev/Member</p>
                       <p className="font-mono font-bold text-foreground">
-                        £{Math.round(aiInsight.revenuePerMember)}
+                        €{Math.round(aiInsight.revenuePerMember)}
                         {aiInsight.revenuePerMemberPercentile != null && (
                           <span className="text-primary text-[9px] ml-1">P{aiInsight.revenuePerMemberPercentile}</span>
                         )}
@@ -283,9 +283,9 @@ export default function Reports() {
         />
         <KpiCard
           title="Trailing 12m Revenue"
-          value={data ? `£${revenueTrailing12m.toLocaleString("en-IE", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}` : undefined}
+          value={data ? `€${revenueTrailing12m.toLocaleString("en-IE", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}` : undefined}
           loading={isLoading}
-          icon={PoundSterling}
+          icon={Euro}
         />
       </div>
 
@@ -338,10 +338,10 @@ export default function Reports() {
               <BarChart data={monthsWithRevenue} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
                 <XAxis dataKey="month" stroke="hsl(var(--muted-foreground))" fontSize={11} tickLine={false} axisLine={false} />
-                <YAxis stroke="hsl(var(--muted-foreground))" fontSize={11} tickLine={false} axisLine={false} width={55} tickFormatter={(v) => `£${v}`} />
+                <YAxis stroke="hsl(var(--muted-foreground))" fontSize={11} tickLine={false} axisLine={false} width={55} tickFormatter={(v) => `€${v}`} />
                 <RechartsTooltip
                   contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }}
-                  formatter={(v: number) => [`£${v.toLocaleString("en-IE", { maximumFractionDigits: 0 })}`, "Revenue"]}
+                  formatter={(v: number) => [`€${v.toLocaleString("en-IE", { maximumFractionDigits: 0 })}`, "Revenue"]}
                 />
                 <Bar dataKey="revenue" fill="hsl(var(--chart-2))" radius={[4, 4, 0, 0]} />
               </BarChart>
