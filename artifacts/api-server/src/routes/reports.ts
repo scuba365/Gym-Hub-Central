@@ -130,28 +130,29 @@ async function fetchActualMonthlyRevenue(token: string): Promise<Map<string, num
     return invoiceRevenueCache.data;
   }
 
-  // Only need 14 months of history — fetch newest-first and stop early
   const cutoff = new Date();
   cutoff.setMonth(cutoff.getMonth() - 14);
   const cutoffStr = cutoff.toISOString().split("T")[0];
 
+  // Use due_date__gte filter (Django REST Framework style) so we only fetch
+  // recent pages. If GoTeamUp ignores the filter we still cap at 70 pages
+  // and filter client-side.
   const invoices: GoTeamUpInvoice[] = [];
-  let nextUrl: string | null = `${GOTEAMUP_BASE}/invoices?page_size=${PAGE_SIZE}&ordering=-due_date`;
+  let nextUrl: string | null =
+    `${GOTEAMUP_BASE}/invoices?page_size=${PAGE_SIZE}&due_date__gte=${cutoffStr}`;
   let pages = 0;
 
   try {
-    while (nextUrl && pages < 50) {
+    while (nextUrl && pages < 70) {
       const data = await goteamupFetch(nextUrl, token) as PaginatedResponse<GoTeamUpInvoice>;
-      let passedCutoff = false;
       for (const inv of data.results) {
         const dateStr = inv.due_date ?? inv.created_at;
-        if (dateStr && dateStr < cutoffStr) { passedCutoff = true; continue; }
-        invoices.push(inv);
+        if (!dateStr || dateStr >= cutoffStr) invoices.push(inv);
       }
-      if (passedCutoff) break; // all remaining pages are older
       nextUrl = data.next || null;
       pages++;
     }
+    logger.info({ pages, invoicesFetched: invoices.length }, "Reports: invoices fetched");
     if (invoices.length > 0) {
       logger.info({ sample: invoices[0] }, "Reports: invoice sample");
     }
