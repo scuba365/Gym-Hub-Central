@@ -596,6 +596,7 @@ export default function ClientDetail() {
                     />
                     <Legend wrapperStyle={{ fontSize: '12px' }} />
                     <Line yAxisId="left" type="monotone" dataKey="weight" name="Weight (kg)" stroke="hsl(var(--primary))" strokeWidth={2} dot={{ r: 4, fill: "hsl(var(--primary))" }} activeDot={{ r: 6 }} />
+                    <Line yAxisId="left" type="monotone" dataKey="muscle" name="Muscle Mass (kg)" stroke="hsl(var(--chart-3))" strokeWidth={2} dot={{ r: 4, fill: "hsl(var(--chart-3))" }} activeDot={{ r: 6 }} />
                     <Line yAxisId="right" type="monotone" dataKey="bodyFat" name="Body Fat %" stroke="hsl(var(--chart-2))" strokeWidth={2} dot={{ r: 4, fill: "hsl(var(--chart-2))" }} activeDot={{ r: 6 }} />
                   </LineChart>
                 </ResponsiveContainer>
