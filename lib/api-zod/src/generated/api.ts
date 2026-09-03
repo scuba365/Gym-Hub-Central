@@ -78,6 +78,7 @@ export const GetClientResponse = zod.object({
   "id": zod.number(),
   "name": zod.string(),
   "email": zod.string().nullish(),
+  "phone": zod.string().nullish(),
   "photoUrl": zod.string().nullish(),
   "goals": zod.string().nullish(),
   "needsMealPlan": zod.boolean(),

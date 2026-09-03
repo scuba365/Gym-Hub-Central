@@ -657,6 +657,8 @@ components:
           type: string
         email:
           type: ["string", "null"]
+        phone:
+          type: ["string", "null"]
         photoUrl:
           type: ["string", "null"]
         goals:

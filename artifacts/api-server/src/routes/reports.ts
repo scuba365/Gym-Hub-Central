@@ -768,7 +768,6 @@ router.get("/reports/class-analytics", async (req, res) => {
   const token = process.env.TEAMUP_M2M_TOKEN;
   if (!token) return res.status(503).json({ error: "TEAMUP_M2M_TOKEN not set" });
 
-  classAnalyticsCache = null; // clear on every request until data confirmed correct — remove after first successful test
   if (classAnalyticsCache && Date.now() - classAnalyticsCache.at < CACHE_MS) {
     return res.json(classAnalyticsCache.data);
   }
