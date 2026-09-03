@@ -127,6 +127,13 @@ export function useHealthCheck<TData = Awaited<ReturnType<typeof healthCheck>>, 
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
+
+
+
+
+
+
+
 export const getListClientsUrl = (params?: ListClientsParams,) => {
   const normalizedParams = new URLSearchParams();
 
@@ -204,6 +211,13 @@ export function useListClients<TData = Awaited<ReturnType<typeof listClients>>, 
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
+
+
+
+
+
+
+
 export const getGetClientUrl = (id: number,) => {
 
 
@@ -274,6 +288,13 @@ export function useGetClient<TData = Awaited<ReturnType<typeof getClient>>, TErr
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
+
+
+
+
+
+
+
 export const getDeleteClientUrl = (id: number,) => {
 
 
@@ -486,6 +507,7 @@ export function useGetClientScans<TData = Awaited<ReturnType<typeof getClientSca
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
+
 
 
 

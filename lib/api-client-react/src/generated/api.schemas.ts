@@ -269,6 +269,14 @@ export interface SyncResult {
   missingSources: string[];
 }
 
+export interface MembershipBreakdown {
+  smallGroupPt: number;
+  sixWeekChallenge: number;
+  largeGroupRecurring: number;
+  flexPass: number;
+  other: number;
+}
+
 export interface DashboardStats {
   totalClients: number;
   activeClients: number;
@@ -280,6 +288,7 @@ export interface DashboardStats {
   lastSyncedAt?: string | null;
   /** @nullable */
   avgWeeklyAttendance?: number | null;
+  membershipBreakdown?: MembershipBreakdown | null;
 }
 
 export interface UpcomingBirthday {

@@ -596,7 +596,14 @@ export const GetDashboardStatsResponse = zod.object({
   "needsMealPlanCount": zod.number(),
   "overdueInBodyCount": zod.number(),
   "lastSyncedAt": zod.string().nullish(),
-  "avgWeeklyAttendance": zod.number().nullish()
+  "avgWeeklyAttendance": zod.number().nullish(),
+  "membershipBreakdown": zod.union([zod.object({
+  "smallGroupPt": zod.number(),
+  "sixWeekChallenge": zod.number(),
+  "largeGroupRecurring": zod.number(),
+  "flexPass": zod.number(),
+  "other": zod.number()
+}),zod.null()]).optional()
 })
 
 

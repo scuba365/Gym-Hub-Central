@@ -879,6 +879,26 @@ components:
         - configuredSources
         - missingSources
 
+    MembershipBreakdown:
+      type: object
+      properties:
+        smallGroupPt:
+          type: integer
+        sixWeekChallenge:
+          type: integer
+        largeGroupRecurring:
+          type: integer
+        flexPass:
+          type: integer
+        other:
+          type: integer
+      required:
+        - smallGroupPt
+        - sixWeekChallenge
+        - largeGroupRecurring
+        - flexPass
+        - other
+
     DashboardStats:
       type: object
       properties:
@@ -898,6 +918,10 @@ components:
           type: ["string", "null"]
         avgWeeklyAttendance:
           type: ["number", "null"]
+        membershipBreakdown:
+          oneOf:
+            - $ref: "#/components/schemas/MembershipBreakdown"
+            - type: "null"
       required:
         - totalClients
         - activeClients

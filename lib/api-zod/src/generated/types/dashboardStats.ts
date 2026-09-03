@@ -5,6 +5,7 @@
  * Gym OS API — unified client data from TeamUp, Trainerize, and InBody
  * OpenAPI spec version: 0.1.0
  */
+import type { MembershipBreakdown } from './membershipBreakdown';
 
 export interface DashboardStats {
   totalClients: number;
@@ -17,4 +18,5 @@ export interface DashboardStats {
   lastSyncedAt?: string | null;
   /** @nullable */
   avgWeeklyAttendance?: number | null;
+  membershipBreakdown?: MembershipBreakdown | null;
 }

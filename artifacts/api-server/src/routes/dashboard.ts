@@ -1,10 +1,71 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
 import { clientsTable, inbodyScansTable } from "@workspace/db";
-import { eq, sql, count, isNotNull, and } from "drizzle-orm";
+import { eq, isNotNull, and } from "drizzle-orm";
 import { getAttendanceRiskByClientId } from "../services/attendance-risk";
+import { GOTEAMUP_BASE, PAGE_SIZE, goteamupFetchAll } from "../lib/goteamup";
+import { logger } from "../lib/logger";
 
 const router = Router();
+
+// ─── Membership breakdown cache ───────────────────────────────────────────────
+
+interface ActiveMembership {
+  customer: number;
+  name: string;
+  status: string;
+}
+
+export interface MembershipBreakdown {
+  smallGroupPt: number;
+  sixWeekChallenge: number;
+  largeGroupRecurring: number;
+  flexPass: number;
+  other: number;
+}
+
+let membershipBreakdownCache: { data: MembershipBreakdown; at: number } | null = null;
+const MEMBERSHIP_CACHE_MS = 10 * 60 * 1000;
+
+function bucketPlan(name: string): keyof MembershipBreakdown {
+  const n = name.toLowerCase();
+  if (n.includes("small")) return "smallGroupPt";
+  if (n.includes("6") || n.includes("six") || n.includes("challenge")) return "sixWeekChallenge";
+  if (n.includes("large") || n.includes("recurring")) return "largeGroupRecurring";
+  if (n.includes("flex")) return "flexPass";
+  return "other";
+}
+
+async function fetchMembershipBreakdown(token: string): Promise<MembershipBreakdown> {
+  if (membershipBreakdownCache && Date.now() - membershipBreakdownCache.at < MEMBERSHIP_CACHE_MS) {
+    return membershipBreakdownCache.data;
+  }
+
+  const memberships = await goteamupFetchAll<ActiveMembership>(
+    `${GOTEAMUP_BASE}/customer_memberships?page_size=${PAGE_SIZE}&status=active`,
+    token
+  );
+
+  // Deduplicate: if a customer has multiple active plans, count them in each relevant bucket
+  const result: MembershipBreakdown = { smallGroupPt: 0, sixWeekChallenge: 0, largeGroupRecurring: 0, flexPass: 0, other: 0 };
+  const counted = new Map<number, Set<keyof MembershipBreakdown>>();
+
+  for (const mem of memberships) {
+    const bucket = bucketPlan(mem.name ?? "");
+    const seen = counted.get(mem.customer) ?? new Set();
+    if (!seen.has(bucket)) {
+      result[bucket]++;
+      seen.add(bucket);
+      counted.set(mem.customer, seen);
+    }
+  }
+
+  logger.info(result, "Dashboard: membership breakdown fetched");
+  membershipBreakdownCache = { data: result, at: Date.now() };
+  return result;
+}
+
+// ─── Routes ───────────────────────────────────────────────────────────────────
 
 router.get("/dashboard/stats", async (req, res) => {
   try {
@@ -33,7 +94,6 @@ router.get("/dashboard/stats", async (req, res) => {
 
       if (c.needsMealPlan) needsMealPlanCount++;
 
-      // Overdue InBody: no scan in 90 days or never scanned
       if (!c.latestScanDate || c.latestScanDate < ninetyDaysAgoStr) {
         overdueInBodyCount++;
       }
@@ -48,7 +108,6 @@ router.get("/dashboard/stats", async (req, res) => {
       ? Math.round((attendanceSum / attendanceCount) * 10) / 10
       : null;
 
-    // Get the last sync time
     const lastSyncedAt =
       clients.length > 0
         ? clients
@@ -56,6 +115,16 @@ router.get("/dashboard/stats", async (req, res) => {
             .sort((a, b) => (b.lastSyncedAt || "").localeCompare(a.lastSyncedAt || ""))[0]
             ?.lastSyncedAt || null
         : null;
+
+    const token = process.env.TEAMUP_M2M_TOKEN;
+    let membershipBreakdown: MembershipBreakdown | null = null;
+    if (token) {
+      try {
+        membershipBreakdown = await fetchMembershipBreakdown(token);
+      } catch (err) {
+        logger.warn({ err }, "Dashboard: membership breakdown fetch failed, omitting from stats");
+      }
+    }
 
     res.json({
       totalClients,
@@ -66,6 +135,7 @@ router.get("/dashboard/stats", async (req, res) => {
       overdueInBodyCount,
       lastSyncedAt,
       avgWeeklyAttendance,
+      membershipBreakdown,
     });
   } catch (err) {
     res.status(500).json({ error: "Failed to fetch dashboard stats" });

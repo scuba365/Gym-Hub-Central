@@ -74,10 +74,6 @@ export default function Dashboard() {
     (mealPlanClients && mealPlanClients.length > 0) ||
     (atRiskClients && atRiskClients.length > 0);
 
-  const activeRate = stats && stats.totalClients > 0
-    ? Math.round((stats.activeClients / stats.totalClients) * 100)
-    : null;
-
   return (
     <div className="container mx-auto p-4 max-w-7xl">
       {/* Header */}
@@ -111,7 +107,7 @@ export default function Dashboard() {
       </header>
 
       {/* Stats — Primary row */}
-      <div className="grid grid-cols-3 gap-px bg-border rounded-lg overflow-hidden mb-4">
+      <div className="grid grid-cols-2 gap-px bg-border rounded-lg overflow-hidden mb-4">
         <BigStatCard
           label="Members"
           value={stats?.totalClients}
@@ -119,17 +115,37 @@ export default function Dashboard() {
           onClick={() => { setTab("members"); setStatus("all"); }}
         />
         <BigStatCard
-          label="Active in Program"
-          value={stats?.activeClients}
-          sub={activeRate != null ? `${activeRate}% of members` : undefined}
-          loading={statsLoading}
-          valueClass="text-primary"
-          onClick={() => { setTab("members"); setStatus("active"); }}
-        />
-        <BigStatCard
           label="Avg Weekly Classes"
           value={stats?.avgWeeklyAttendance != null ? stats.avgWeeklyAttendance.toFixed(1) : undefined}
           loading={statsLoading}
+        />
+      </div>
+
+      {/* Stats — Membership breakdown row */}
+      <div className="grid grid-cols-4 gap-px bg-border rounded-lg overflow-hidden mb-4">
+        <BigStatCard
+          label="Small Group PT"
+          value={stats?.membershipBreakdown?.smallGroupPt}
+          loading={statsLoading}
+          valueClass="text-primary"
+        />
+        <BigStatCard
+          label="6 Wk Challenge"
+          value={stats?.membershipBreakdown?.sixWeekChallenge}
+          loading={statsLoading}
+          valueClass="text-primary"
+        />
+        <BigStatCard
+          label="Large Group"
+          value={stats?.membershipBreakdown?.largeGroupRecurring}
+          loading={statsLoading}
+          valueClass="text-primary"
+        />
+        <BigStatCard
+          label="Flex Pass"
+          value={stats?.membershipBreakdown?.flexPass}
+          loading={statsLoading}
+          valueClass="text-primary"
         />
       </div>
 

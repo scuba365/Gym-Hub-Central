@@ -41,6 +41,7 @@ export * from './inBodyScan';
 export * from './listClientsEngagementStatus';
 export * from './listClientsParams';
 export * from './macroUpdate';
+export * from './membershipBreakdown';
 export * from './membershipBreakdownItem';
 export * from './membershipCurrent';
 export * from './membershipDrilldown';
