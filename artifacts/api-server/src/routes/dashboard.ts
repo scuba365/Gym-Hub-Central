@@ -18,22 +18,37 @@ interface ActiveMembership {
 
 export interface MembershipBreakdown {
   smallGroupPt: number;
-  sixWeekChallenge: number;
-  largeGroupRecurring: number;
+  challenge: number;
+  largeGroup: number;
+  teen: number;
   flexPass: number;
+  prime: number;
   other: number;
 }
+
+const PLAN_BUCKETS: Record<string, keyof MembershipBreakdown> = {
+  "small group pt membership x2": "smallGroupPt",
+  "small group pt membership x3": "smallGroupPt",
+  "small group pt membership x4": "smallGroupPt",
+  "level up": "smallGroupPt",
+  "lifetime membership": "smallGroupPt",
+  "couples membership": "smallGroupPt",
+  "summer coaching": "smallGroupPt",
+  "6 week challenge": "challenge",
+  "30 day trial": "challenge",
+  "athletic training club": "largeGroup",
+  "next gen strength x1": "teen",
+  "next gen strength": "teen",
+  "atc starter pass": "flexPass",
+  "flex pass 10": "flexPass",
+  "prime strength": "prime",
+};
 
 let membershipBreakdownCache: { data: MembershipBreakdown; at: number } | null = null;
 const MEMBERSHIP_CACHE_MS = 10 * 60 * 1000;
 
 function bucketPlan(name: string): keyof MembershipBreakdown {
-  const n = name.toLowerCase();
-  if (n.includes("small")) return "smallGroupPt";
-  if (n.includes("6") || n.includes("six") || n.includes("challenge")) return "sixWeekChallenge";
-  if (n.includes("large") || n.includes("recurring")) return "largeGroupRecurring";
-  if (n.includes("flex")) return "flexPass";
-  return "other";
+  return PLAN_BUCKETS[name.toLowerCase().trim()] ?? "other";
 }
 
 async function fetchMembershipBreakdown(token: string): Promise<MembershipBreakdown> {
@@ -47,7 +62,7 @@ async function fetchMembershipBreakdown(token: string): Promise<MembershipBreakd
   );
 
   // Deduplicate: if a customer has multiple active plans, count them in each relevant bucket
-  const result: MembershipBreakdown = { smallGroupPt: 0, sixWeekChallenge: 0, largeGroupRecurring: 0, flexPass: 0, other: 0 };
+  const result: MembershipBreakdown = { smallGroupPt: 0, challenge: 0, largeGroup: 0, teen: 0, flexPass: 0, prime: 0, other: 0 };
   const counted = new Map<number, Set<keyof MembershipBreakdown>>();
 
   for (const mem of memberships) {

@@ -884,19 +884,25 @@ components:
       properties:
         smallGroupPt:
           type: integer
-        sixWeekChallenge:
+        challenge:
           type: integer
-        largeGroupRecurring:
+        largeGroup:
+          type: integer
+        teen:
           type: integer
         flexPass:
+          type: integer
+        prime:
           type: integer
         other:
           type: integer
       required:
         - smallGroupPt
-        - sixWeekChallenge
-        - largeGroupRecurring
+        - challenge
+        - largeGroup
+        - teen
         - flexPass
+        - prime
         - other
 
     DashboardStats:

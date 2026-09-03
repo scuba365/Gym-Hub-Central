@@ -121,8 +121,8 @@ export default function Dashboard() {
         />
       </div>
 
-      {/* Stats — Membership breakdown row */}
-      <div className="grid grid-cols-4 gap-px bg-border rounded-lg overflow-hidden mb-4">
+      {/* Stats — Membership breakdown (3×2 grid) */}
+      <div className="grid grid-cols-3 gap-px bg-border rounded-lg overflow-hidden mb-4">
         <BigStatCard
           label="Small Group PT"
           value={stats?.membershipBreakdown?.smallGroupPt}
@@ -130,20 +130,32 @@ export default function Dashboard() {
           valueClass="text-primary"
         />
         <BigStatCard
-          label="6 Wk Challenge"
-          value={stats?.membershipBreakdown?.sixWeekChallenge}
+          label="Challenge"
+          value={stats?.membershipBreakdown?.challenge}
           loading={statsLoading}
           valueClass="text-primary"
         />
         <BigStatCard
           label="Large Group"
-          value={stats?.membershipBreakdown?.largeGroupRecurring}
+          value={stats?.membershipBreakdown?.largeGroup}
+          loading={statsLoading}
+          valueClass="text-primary"
+        />
+        <BigStatCard
+          label="Teen"
+          value={stats?.membershipBreakdown?.teen}
           loading={statsLoading}
           valueClass="text-primary"
         />
         <BigStatCard
           label="Flex Pass"
           value={stats?.membershipBreakdown?.flexPass}
+          loading={statsLoading}
+          valueClass="text-primary"
+        />
+        <BigStatCard
+          label="Prime"
+          value={stats?.membershipBreakdown?.prime}
           loading={statsLoading}
           valueClass="text-primary"
         />

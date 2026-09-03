@@ -271,9 +271,11 @@ export interface SyncResult {
 
 export interface MembershipBreakdown {
   smallGroupPt: number;
-  sixWeekChallenge: number;
-  largeGroupRecurring: number;
+  challenge: number;
+  largeGroup: number;
+  teen: number;
   flexPass: number;
+  prime: number;
   other: number;
 }
 
