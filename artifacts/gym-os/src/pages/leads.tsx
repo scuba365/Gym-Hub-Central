@@ -6,6 +6,7 @@ import {
   useUpdateLead,
   useDeleteLead,
   getListLeadsQueryKey,
+  useSyncLeadsFromGoteamup,
 } from "@workspace/api-client-react";
 import type { Lead, LeadStatus, LeadSource } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -192,6 +193,16 @@ export default function Leads() {
     },
   });
 
+  const syncMutation = useSyncLeadsFromGoteamup({
+    mutation: {
+      onSuccess: (result) => {
+        queryClient.invalidateQueries({ queryKey: getListLeadsQueryKey() });
+        toast({ title: `GoTeamUp sync: ${result.created} new, ${result.skipped} already existed` });
+      },
+      onError: () => toast({ title: "GoTeamUp sync failed", variant: "destructive" }),
+    },
+  });
+
   // Pre-populate form when opening edit dialog
   useEffect(() => {
     if (editLead) {
@@ -295,10 +306,22 @@ export default function Leads() {
           </Link>
           <h1 className="text-2xl font-display font-bold text-foreground tracking-tight">Leads</h1>
         </div>
-        <Button size="sm" onClick={() => setAddOpen(true)} className="gap-1">
-          <Plus className="h-4 w-4" />
-          Add Lead
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => syncMutation.mutate()}
+            disabled={syncMutation.isPending}
+            className="gap-1"
+          >
+            <UserPlus className="h-4 w-4" />
+            {syncMutation.isPending ? "Syncing…" : "Sync GoTeamUp"}
+          </Button>
+          <Button size="sm" onClick={() => setAddOpen(true)} className="gap-1">
+            <Plus className="h-4 w-4" />
+            Add Lead
+          </Button>
+        </div>
       </div>
 
       {/* Pipeline funnel stats */}

@@ -38,6 +38,7 @@ import type {
   InBodyScan,
   Lead,
   LeadCreate,
+  LeadSyncResult,
   LeadUpdate,
   ListClientsParams,
   ListLeadsParams,
@@ -2093,5 +2094,75 @@ export const useDeleteLead = <TError = ErrorType<ErrorResponse>,
         TContext
       > => {
       return useMutation(getDeleteLeadMutationOptions(options));
+    }
+
+export const getSyncLeadsFromGoteamupUrl = () => {
+
+
+
+
+  return `/api/leads/sync/goteamup`
+}
+
+/**
+ * @summary Import trial members from GoTeamUp as leads
+ */
+export const syncLeadsFromGoteamup = async ( options?: RequestInit): Promise<LeadSyncResult> => {
+
+  return customFetch<LeadSyncResult>(getSyncLeadsFromGoteamupUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getSyncLeadsFromGoteamupMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof syncLeadsFromGoteamup>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof syncLeadsFromGoteamup>>, TError,void, TContext> => {
+
+const mutationKey = ['syncLeadsFromGoteamup'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof syncLeadsFromGoteamup>>, void> = () => {
+
+
+          return  syncLeadsFromGoteamup(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SyncLeadsFromGoteamupMutationResult = NonNullable<Awaited<ReturnType<typeof syncLeadsFromGoteamup>>>
+
+    export type SyncLeadsFromGoteamupMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Import trial members from GoTeamUp as leads
+ */
+export const useSyncLeadsFromGoteamup = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof syncLeadsFromGoteamup>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof syncLeadsFromGoteamup>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getSyncLeadsFromGoteamupMutationOptions(options));
     }
 

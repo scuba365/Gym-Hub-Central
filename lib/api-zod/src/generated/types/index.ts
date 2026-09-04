@@ -42,6 +42,7 @@ export * from './lead';
 export * from './leadCreate';
 export * from './leadSource';
 export * from './leadStatus';
+export * from './leadSyncResult';
 export * from './leadUpdate';
 export * from './listClientsEngagementStatus';
 export * from './listClientsParams';

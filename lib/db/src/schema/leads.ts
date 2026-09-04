@@ -30,6 +30,7 @@ export const leadsTable = pgTable("leads", {
   notes: text("notes"),
   goalText: text("goal_text"),
   followUpAt: text("follow_up_at"),
+  externalId: text("external_id"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

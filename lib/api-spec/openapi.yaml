@@ -662,6 +662,19 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /leads/sync/goteamup:
+    post:
+      operationId: syncLeadsFromGoteamup
+      tags: [leads]
+      summary: Import trial members from GoTeamUp as leads
+      responses:
+        "200":
+          description: Sync result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LeadSyncResult"
+
 components:
   schemas:
     HealthStatus:
@@ -1480,6 +1493,9 @@ components:
         followUpAt:
           type: ["string", "null"]
           description: Follow-up date in YYYY-MM-DD format
+        externalId:
+          type: ["string", "null"]
+          description: External system ID (e.g. gtu_12345 for GoTeamUp)
         createdAt:
           type: ["string", "null"]
         updatedAt:
@@ -1533,3 +1549,17 @@ components:
         followUpAt:
           type: ["string", "null"]
           description: Follow-up date in YYYY-MM-DD format
+
+    LeadSyncResult:
+      type: object
+      properties:
+        created:
+          type: integer
+        skipped:
+          type: integer
+        errors:
+          type: integer
+      required:
+        - created
+        - skipped
+        - errors

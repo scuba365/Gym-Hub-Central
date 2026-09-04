@@ -1,6 +1,8 @@
 import { Router } from "express";
 import { db, leadsTable } from "@workspace/db";
 import { eq, desc, sql } from "drizzle-orm";
+import { GOTEAMUP_BASE, PAGE_SIZE, goteamupFetch, goteamupFetchAll, type PaginatedResponse } from "../lib/goteamup";
+import { logger } from "../lib/logger";
 import {
   ListLeadsQueryParams,
   CreateLeadBody,
@@ -23,6 +25,7 @@ function leadRow(lead: typeof leadsTable.$inferSelect) {
     notes: lead.notes,
     goalText: lead.goalText,
     followUpAt: lead.followUpAt,
+    externalId: lead.externalId,
     createdAt: lead.createdAt?.toISOString() ?? null,
     updatedAt: lead.updatedAt?.toISOString() ?? null,
   };
@@ -140,6 +143,96 @@ router.delete("/leads/:id", async (req, res) => {
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ─── GoTeamUp trial import ────────────────────────────────────────────────────
+
+const TRIAL_PLAN_NAMES = new Set([
+  "30 day trial",
+  "atc starter pass",
+  "6 week challenge",
+]);
+
+interface GTUMembership {
+  customer: number;
+  name: string;
+  status: string;
+}
+
+interface GTUCustomer {
+  id: number;
+  first_name: string;
+  last_name: string;
+  email?: string;
+  phone_number?: string;
+  mobile?: string;
+}
+
+router.post("/leads/sync/goteamup", async (req, res) => {
+  const token = process.env.TEAMUP_M2M_TOKEN;
+  if (!token) {
+    return res.status(503).json({ error: "TEAMUP_M2M_TOKEN not configured" });
+  }
+
+  try {
+    // Fetch all active memberships and collect customer IDs on trial plans
+    const trialCustomerIds = new Set<number>();
+    const memberships = await goteamupFetchAll<GTUMembership>(
+      `${GOTEAMUP_BASE}/customer_memberships?page_size=${PAGE_SIZE}&status=active`,
+      token
+    );
+    for (const m of memberships) {
+      if (TRIAL_PLAN_NAMES.has((m.name ?? "").toLowerCase().trim())) {
+        trialCustomerIds.add(m.customer);
+      }
+    }
+
+    if (trialCustomerIds.size === 0) {
+      return res.json({ created: 0, skipped: 0, errors: 0 });
+    }
+
+    // Fetch existing lead externalIds to skip duplicates
+    const existingLeads = await db.select({ externalId: leadsTable.externalId }).from(leadsTable);
+    const existingExternalIds = new Set(existingLeads.map((l) => l.externalId).filter(Boolean));
+
+    // Fetch customer details
+    let created = 0;
+    let skipped = 0;
+    let errors = 0;
+
+    let nextUrl: string | null = `${GOTEAMUP_BASE}/customers?page_size=${PAGE_SIZE}&participating=true`;
+    while (nextUrl) {
+      const data = await goteamupFetch(nextUrl, token) as PaginatedResponse<GTUCustomer>;
+      for (const c of data.results) {
+        if (!trialCustomerIds.has(c.id)) continue;
+        const externalId = `gtu_${c.id}`;
+        if (existingExternalIds.has(externalId)) { skipped++; continue; }
+        const name = `${c.first_name} ${c.last_name}`.trim();
+        if (!name) { errors++; continue; }
+        try {
+          await db.insert(leadsTable).values({
+            name,
+            email: c.email ?? null,
+            phone: c.phone_number ?? c.mobile ?? null,
+            source: "goteamup",
+            status: "new",
+            externalId,
+          });
+          existingExternalIds.add(externalId);
+          created++;
+        } catch {
+          errors++;
+        }
+      }
+      nextUrl = data.next || null;
+    }
+
+    logger.info({ created, skipped, errors }, "Leads: GoTeamUp sync complete");
+    return res.json({ created, skipped, errors });
+  } catch (err) {
+    logger.error({ err }, "Leads: GoTeamUp sync failed");
+    return res.status(500).json({ error: "Sync failed" });
   }
 });
 

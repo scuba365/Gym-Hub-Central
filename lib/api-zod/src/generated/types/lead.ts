@@ -26,6 +26,11 @@ export interface Lead {
      * @nullable
      */
   followUpAt?: string | null;
+  /**
+     * External system ID (e.g. gtu_12345 for GoTeamUp)
+     * @nullable
+     */
+  externalId?: string | null;
   /** @nullable */
   createdAt?: string | null;
   /** @nullable */

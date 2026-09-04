@@ -642,6 +642,7 @@ export const ListLeadsResponseItem = zod.object({
   "notes": zod.string().nullish(),
   "goalText": zod.string().nullish(),
   "followUpAt": zod.string().nullish().describe('Follow-up date in YYYY-MM-DD format'),
+  "externalId": zod.string().nullish().describe('External system ID (e.g. gtu_12345 for GoTeamUp)'),
   "createdAt": zod.string().nullish(),
   "updatedAt": zod.string().nullish()
 })
@@ -680,6 +681,7 @@ export const GetLeadResponse = zod.object({
   "notes": zod.string().nullish(),
   "goalText": zod.string().nullish(),
   "followUpAt": zod.string().nullish().describe('Follow-up date in YYYY-MM-DD format'),
+  "externalId": zod.string().nullish().describe('External system ID (e.g. gtu_12345 for GoTeamUp)'),
   "createdAt": zod.string().nullish(),
   "updatedAt": zod.string().nullish()
 })
@@ -713,6 +715,7 @@ export const UpdateLeadResponse = zod.object({
   "notes": zod.string().nullish(),
   "goalText": zod.string().nullish(),
   "followUpAt": zod.string().nullish().describe('Follow-up date in YYYY-MM-DD format'),
+  "externalId": zod.string().nullish().describe('External system ID (e.g. gtu_12345 for GoTeamUp)'),
   "createdAt": zod.string().nullish(),
   "updatedAt": zod.string().nullish()
 })
@@ -723,6 +726,16 @@ export const UpdateLeadResponse = zod.object({
  */
 export const DeleteLeadParams = zod.object({
   "id": zod.coerce.number()
+})
+
+
+/**
+ * @summary Import trial members from GoTeamUp as leads
+ */
+export const SyncLeadsFromGoteamupResponse = zod.object({
+  "created": zod.number(),
+  "skipped": zod.number(),
+  "errors": zod.number()
 })
 
 
