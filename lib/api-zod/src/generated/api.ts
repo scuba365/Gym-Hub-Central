@@ -641,6 +641,7 @@ export const ListLeadsResponseItem = zod.object({
   "status": zod.enum(['new', 'qualified', 'challenge_started', 'converted', 'dropped_off']),
   "notes": zod.string().nullish(),
   "goalText": zod.string().nullish(),
+  "followUpAt": zod.string().nullish().describe('Follow-up date in YYYY-MM-DD format'),
   "createdAt": zod.string().nullish(),
   "updatedAt": zod.string().nullish()
 })
@@ -657,7 +658,8 @@ export const CreateLeadBody = zod.object({
   "source": zod.enum(['manual', 'goteamup', 'instagram', 'facebook', 'referral', 'other']).optional(),
   "status": zod.enum(['new', 'qualified', 'challenge_started', 'converted', 'dropped_off']).optional(),
   "notes": zod.string().nullish(),
-  "goalText": zod.string().nullish()
+  "goalText": zod.string().nullish(),
+  "followUpAt": zod.string().nullish().describe('Follow-up date in YYYY-MM-DD format')
 })
 
 
@@ -677,6 +679,7 @@ export const GetLeadResponse = zod.object({
   "status": zod.enum(['new', 'qualified', 'challenge_started', 'converted', 'dropped_off']),
   "notes": zod.string().nullish(),
   "goalText": zod.string().nullish(),
+  "followUpAt": zod.string().nullish().describe('Follow-up date in YYYY-MM-DD format'),
   "createdAt": zod.string().nullish(),
   "updatedAt": zod.string().nullish()
 })
@@ -696,7 +699,8 @@ export const UpdateLeadBody = zod.object({
   "source": zod.enum(['manual', 'goteamup', 'instagram', 'facebook', 'referral', 'other']).optional(),
   "status": zod.enum(['new', 'qualified', 'challenge_started', 'converted', 'dropped_off']).optional(),
   "notes": zod.string().nullish(),
-  "goalText": zod.string().nullish()
+  "goalText": zod.string().nullish(),
+  "followUpAt": zod.string().nullish().describe('Follow-up date in YYYY-MM-DD format')
 })
 
 export const UpdateLeadResponse = zod.object({
@@ -708,6 +712,7 @@ export const UpdateLeadResponse = zod.object({
   "status": zod.enum(['new', 'qualified', 'challenge_started', 'converted', 'dropped_off']),
   "notes": zod.string().nullish(),
   "goalText": zod.string().nullish(),
+  "followUpAt": zod.string().nullish().describe('Follow-up date in YYYY-MM-DD format'),
   "createdAt": zod.string().nullish(),
   "updatedAt": zod.string().nullish()
 })

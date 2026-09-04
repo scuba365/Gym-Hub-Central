@@ -1477,6 +1477,9 @@ components:
           type: ["string", "null"]
         goalText:
           type: ["string", "null"]
+        followUpAt:
+          type: ["string", "null"]
+          description: Follow-up date in YYYY-MM-DD format
         createdAt:
           type: ["string", "null"]
         updatedAt:
@@ -1504,6 +1507,9 @@ components:
           type: ["string", "null"]
         goalText:
           type: ["string", "null"]
+        followUpAt:
+          type: ["string", "null"]
+          description: Follow-up date in YYYY-MM-DD format
       required:
         - name
 
@@ -1524,3 +1530,6 @@ components:
           type: ["string", "null"]
         goalText:
           type: ["string", "null"]
+        followUpAt:
+          type: ["string", "null"]
+          description: Follow-up date in YYYY-MM-DD format

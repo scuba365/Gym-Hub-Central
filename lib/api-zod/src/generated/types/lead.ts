@@ -21,6 +21,11 @@ export interface Lead {
   notes?: string | null;
   /** @nullable */
   goalText?: string | null;
+  /**
+     * Follow-up date in YYYY-MM-DD format
+     * @nullable
+     */
+  followUpAt?: string | null;
   /** @nullable */
   createdAt?: string | null;
   /** @nullable */

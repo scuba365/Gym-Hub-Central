@@ -22,6 +22,7 @@ function leadRow(lead: typeof leadsTable.$inferSelect) {
     status: lead.status,
     notes: lead.notes,
     goalText: lead.goalText,
+    followUpAt: lead.followUpAt,
     createdAt: lead.createdAt?.toISOString() ?? null,
     updatedAt: lead.updatedAt?.toISOString() ?? null,
   };
@@ -50,7 +51,7 @@ router.post("/leads", async (req, res) => {
     if (!parsed.success) {
       return res.status(400).json({ error: parsed.error.message });
     }
-    const { name, email, phone, source, status, notes, goalText } = parsed.data;
+    const { name, email, phone, source, status, notes, goalText, followUpAt } = parsed.data;
     const [lead] = await db
       .insert(leadsTable)
       .values({
@@ -61,6 +62,7 @@ router.post("/leads", async (req, res) => {
         status: status ?? "new",
         notes: notes ?? null,
         goalText: goalText ?? null,
+        followUpAt: followUpAt ?? null,
       })
       .returning();
     return res.status(201).json(leadRow(lead));
@@ -108,6 +110,7 @@ router.patch("/leads/:id", async (req, res) => {
     if (b.status !== undefined) updates.status = b.status;
     if (b.notes !== undefined) updates.notes = b.notes;
     if (b.goalText !== undefined) updates.goalText = b.goalText;
+    if (b.followUpAt !== undefined) updates.followUpAt = b.followUpAt;
 
     const [lead] = await db
       .update(leadsTable)

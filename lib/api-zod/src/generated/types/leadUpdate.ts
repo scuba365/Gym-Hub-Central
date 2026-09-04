@@ -20,4 +20,9 @@ export interface LeadUpdate {
   notes?: string | null;
   /** @nullable */
   goalText?: string | null;
+  /**
+     * Follow-up date in YYYY-MM-DD format
+     * @nullable
+     */
+  followUpAt?: string | null;
 }

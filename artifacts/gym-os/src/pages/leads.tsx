@@ -130,6 +130,7 @@ interface LeadForm {
   status: LeadStatus;
   notes: string;
   goalText: string;
+  followUpAt: string;
 }
 
 const EMPTY_FORM: LeadForm = {
@@ -140,6 +141,7 @@ const EMPTY_FORM: LeadForm = {
   status: "new",
   notes: "",
   goalText: "",
+  followUpAt: "",
 };
 
 // ─── Main page ────────────────────────────────────────────────────────────────
@@ -201,6 +203,7 @@ export default function Leads() {
         status: (editLead.status as LeadStatus) ?? "new",
         notes: editLead.notes ?? "",
         goalText: editLead.goalText ?? "",
+        followUpAt: editLead.followUpAt ?? "",
       });
     }
   }, [editLead]);
@@ -219,6 +222,8 @@ export default function Leads() {
     return map;
   }, [leads]);
 
+  const today = new Date().toISOString().split("T")[0];
+
   const filtered = useMemo(() => {
     let list = activeStatus === "all" ? leads : leads.filter((l) => l.status === activeStatus);
     if (search.trim()) {
@@ -230,8 +235,13 @@ export default function Leads() {
           (l.phone ?? "").toLowerCase().includes(q)
       );
     }
-    return list;
-  }, [leads, activeStatus, search]);
+    // Overdue follow-ups first
+    return [...list].sort((a, b) => {
+      const aOverdue = a.followUpAt && a.followUpAt <= today ? 0 : 1;
+      const bOverdue = b.followUpAt && b.followUpAt <= today ? 0 : 1;
+      return aOverdue - bOverdue;
+    });
+  }, [leads, activeStatus, search, today]);
 
   function handleStatusChange(lead: Lead, status: LeadStatus) {
     updateMutation.mutate({ id: lead.id, data: { status } });
@@ -249,6 +259,7 @@ export default function Leads() {
         status: form.status,
         notes: form.notes || null,
         goalText: form.goalText || null,
+        followUpAt: form.followUpAt || null,
       },
     });
   }
@@ -266,6 +277,7 @@ export default function Leads() {
         status: form.status,
         notes: form.notes || null,
         goalText: form.goalText || null,
+        followUpAt: form.followUpAt || null,
       },
     });
   }
@@ -445,10 +457,13 @@ function LeadCard({
   onStatusChange: (s: LeadStatus) => void;
 }) {
   const createdDate = lead.createdAt ? new Date(lead.createdAt).toLocaleDateString("en-IE") : null;
+  const today = new Date().toISOString().split("T")[0];
+  const isOverdue = lead.followUpAt && lead.followUpAt <= today;
+  const isDueToday = lead.followUpAt === today;
 
   return (
     <Card
-      className="relative cursor-pointer hover:border-primary/40 transition-colors"
+      className={`relative cursor-pointer hover:border-primary/40 transition-colors ${isOverdue ? "border-yellow-500/50" : ""}`}
       onClick={onEdit}
     >
       <CardContent className="p-4 space-y-3">
@@ -507,6 +522,13 @@ function LeadCard({
         )}
         {lead.notes && (
           <p className="text-xs text-muted-foreground line-clamp-2">{lead.notes}</p>
+        )}
+
+        {/* Follow-up date */}
+        {lead.followUpAt && (
+          <p className={`text-xs font-mono ${isOverdue ? "text-yellow-500 font-semibold" : "text-muted-foreground"}`}>
+            {isDueToday ? "⚡ Follow up today" : isOverdue ? `⚠ Follow up: ${lead.followUpAt}` : `📅 Follow up: ${lead.followUpAt}`}
+          </p>
         )}
 
         {/* Status selector + delete */}
@@ -628,6 +650,15 @@ function LeadFormFields({
           value={form.goalText}
           onChange={(e) => set("goalText")(e.target.value)}
           placeholder="What they want to achieve"
+        />
+      </div>
+      <div className="space-y-1">
+        <Label htmlFor="lead-followup">Follow-up Date</Label>
+        <Input
+          id="lead-followup"
+          type="date"
+          value={form.followUpAt}
+          onChange={(e) => set("followUpAt")(e.target.value)}
         />
       </div>
       <div className="space-y-1">
