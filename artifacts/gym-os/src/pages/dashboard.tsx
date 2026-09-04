@@ -30,6 +30,7 @@ import {
   MessageCircle,
   Cake,
   Gift,
+  UserPlus,
 } from "lucide-react";
 
 function toWhatsAppHref(phone: string | null | undefined): string | null {
@@ -99,6 +100,12 @@ export default function Dashboard() {
             <Button variant="outline" size="sm">
               <TrendingUp className="h-4 w-4 mr-1" />
               Growth
+            </Button>
+          </Link>
+          <Link href="/leads">
+            <Button variant="outline" size="sm">
+              <UserPlus className="h-4 w-4 mr-1" />
+              Leads
             </Button>
           </Link>
           <InBodyImportButton />

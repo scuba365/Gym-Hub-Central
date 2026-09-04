@@ -625,3 +625,99 @@ export const GetDashboardBirthdaysResponseItem = zod.object({
 export const GetDashboardBirthdaysResponse = zod.array(GetDashboardBirthdaysResponseItem)
 
 
+/**
+ * @summary List leads, optionally filtered by pipeline status
+ */
+export const ListLeadsQueryParams = zod.object({
+  "status": zod.enum(['new', 'qualified', 'challenge_started', 'converted', 'dropped_off']).optional()
+})
+
+export const ListLeadsResponseItem = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "email": zod.string().nullish(),
+  "phone": zod.string().nullish(),
+  "source": zod.enum(['manual', 'goteamup', 'instagram', 'facebook', 'referral', 'other']),
+  "status": zod.enum(['new', 'qualified', 'challenge_started', 'converted', 'dropped_off']),
+  "notes": zod.string().nullish(),
+  "goalText": zod.string().nullish(),
+  "createdAt": zod.string().nullish(),
+  "updatedAt": zod.string().nullish()
+})
+export const ListLeadsResponse = zod.array(ListLeadsResponseItem)
+
+
+/**
+ * @summary Create a new lead
+ */
+export const CreateLeadBody = zod.object({
+  "name": zod.string(),
+  "email": zod.string().nullish(),
+  "phone": zod.string().nullish(),
+  "source": zod.enum(['manual', 'goteamup', 'instagram', 'facebook', 'referral', 'other']).optional(),
+  "status": zod.enum(['new', 'qualified', 'challenge_started', 'converted', 'dropped_off']).optional(),
+  "notes": zod.string().nullish(),
+  "goalText": zod.string().nullish()
+})
+
+
+/**
+ * @summary Get a single lead by id
+ */
+export const GetLeadParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetLeadResponse = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "email": zod.string().nullish(),
+  "phone": zod.string().nullish(),
+  "source": zod.enum(['manual', 'goteamup', 'instagram', 'facebook', 'referral', 'other']),
+  "status": zod.enum(['new', 'qualified', 'challenge_started', 'converted', 'dropped_off']),
+  "notes": zod.string().nullish(),
+  "goalText": zod.string().nullish(),
+  "createdAt": zod.string().nullish(),
+  "updatedAt": zod.string().nullish()
+})
+
+
+/**
+ * @summary Update lead status, notes, or other fields
+ */
+export const UpdateLeadParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateLeadBody = zod.object({
+  "name": zod.string().optional(),
+  "email": zod.string().nullish(),
+  "phone": zod.string().nullish(),
+  "source": zod.enum(['manual', 'goteamup', 'instagram', 'facebook', 'referral', 'other']).optional(),
+  "status": zod.enum(['new', 'qualified', 'challenge_started', 'converted', 'dropped_off']).optional(),
+  "notes": zod.string().nullish(),
+  "goalText": zod.string().nullish()
+})
+
+export const UpdateLeadResponse = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "email": zod.string().nullish(),
+  "phone": zod.string().nullish(),
+  "source": zod.enum(['manual', 'goteamup', 'instagram', 'facebook', 'referral', 'other']),
+  "status": zod.enum(['new', 'qualified', 'challenge_started', 'converted', 'dropped_off']),
+  "notes": zod.string().nullish(),
+  "goalText": zod.string().nullish(),
+  "createdAt": zod.string().nullish(),
+  "updatedAt": zod.string().nullish()
+})
+
+
+/**
+ * @summary Delete a lead
+ */
+export const DeleteLeadParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+

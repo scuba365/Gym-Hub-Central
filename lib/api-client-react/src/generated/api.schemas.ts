@@ -492,6 +492,76 @@ export interface AiInsightReport {
   revenuePerMemberPercentile?: number | null;
 }
 
+export type LeadStatus = typeof LeadStatus[keyof typeof LeadStatus];
+
+
+export const LeadStatus = {
+  new: 'new',
+  qualified: 'qualified',
+  challenge_started: 'challenge_started',
+  converted: 'converted',
+  dropped_off: 'dropped_off',
+} as const;
+
+export type LeadSource = typeof LeadSource[keyof typeof LeadSource];
+
+
+export const LeadSource = {
+  manual: 'manual',
+  goteamup: 'goteamup',
+  instagram: 'instagram',
+  facebook: 'facebook',
+  referral: 'referral',
+  other: 'other',
+} as const;
+
+export interface Lead {
+  id: number;
+  name: string;
+  /** @nullable */
+  email?: string | null;
+  /** @nullable */
+  phone?: string | null;
+  source: LeadSource;
+  status: LeadStatus;
+  /** @nullable */
+  notes?: string | null;
+  /** @nullable */
+  goalText?: string | null;
+  /** @nullable */
+  createdAt?: string | null;
+  /** @nullable */
+  updatedAt?: string | null;
+}
+
+export interface LeadCreate {
+  name: string;
+  /** @nullable */
+  email?: string | null;
+  /** @nullable */
+  phone?: string | null;
+  source?: LeadSource;
+  status?: LeadStatus;
+  /** @nullable */
+  notes?: string | null;
+  /** @nullable */
+  goalText?: string | null;
+}
+
+export interface LeadUpdate {
+  name?: string;
+  /** @nullable */
+  email?: string | null;
+  /** @nullable */
+  phone?: string | null;
+  source?: LeadSource;
+  status?: LeadStatus;
+  /** @nullable */
+  notes?: string | null;
+  /** @nullable */
+  goalText?: string | null;
+}
+
 export type ListClientsParams = {
 search?: string;
 engagementStatus?: ListClientsEngagementStatus;
@@ -528,4 +598,8 @@ export const GetMembershipDrilldownCategory = {
   new: 'new',
   churned: 'churned',
 } as const;
+
+export type ListLeadsParams = {
+status?: LeadStatus;
+};
 
