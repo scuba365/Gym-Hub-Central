@@ -386,4 +386,119 @@ router.post("/leads/sync/meta", async (req, res) => {
   }
 });
 
+// ─── Tally webhook ───────────────────────────────────────────────────────────
+
+interface TallyField {
+  key: string;
+  label: string;
+  type: string;
+  value: unknown;
+}
+
+interface TallyWebhookBody {
+  eventId?: string;
+  eventType?: string;
+  data?: {
+    responseId?: string;
+    submissionId?: string;
+    formId?: string;
+    formName?: string;
+    fields?: TallyField[];
+  };
+}
+
+function tallyFieldString(fields: TallyField[], type: string, labelHints: string[]): string | null {
+  // Match by field type first
+  const byType = fields.find((f) => f.type === type && typeof f.value === "string" && f.value);
+  if (byType) return byType.value as string;
+  // Fall back to label matching
+  const byLabel = fields.find(
+    (f) => labelHints.some((h) => f.label.toLowerCase().includes(h)) && typeof f.value === "string" && f.value
+  );
+  return byLabel ? (byLabel.value as string) : null;
+}
+
+function tallyExtractName(fields: TallyField[]): string | null {
+  // Try dedicated name field types
+  const nameField = fields.find(
+    (f) =>
+      ["INPUT_TEXT", "INPUT_TEXT_LONG"].includes(f.type) &&
+      ["name", "full name", "your name", "full_name"].some((h) => f.label.toLowerCase().includes(h)) &&
+      typeof f.value === "string" &&
+      f.value
+  );
+  if (nameField) return nameField.value as string;
+  // Try first_name + last_name
+  const first = fields.find(
+    (f) => f.label.toLowerCase().includes("first") && typeof f.value === "string" && f.value
+  );
+  const last = fields.find(
+    (f) => f.label.toLowerCase().includes("last") && typeof f.value === "string" && f.value
+  );
+  if (first || last) {
+    return `${first?.value ?? ""} ${last?.value ?? ""}`.trim() || null;
+  }
+  // Fall back to any single-line text field
+  const anyText = fields.find((f) => f.type === "INPUT_TEXT" && typeof f.value === "string" && f.value);
+  return anyText ? (anyText.value as string) : null;
+}
+
+router.post("/leads/webhook/tally", async (req, res) => {
+  try {
+    const body = req.body as TallyWebhookBody;
+
+    if (body.eventType && body.eventType !== "FORM_RESPONSE") {
+      // Acknowledge non-response events (e.g. test pings) without creating a lead
+      return res.status(200).json({ ok: true });
+    }
+
+    const fields = body.data?.fields ?? [];
+
+    const name = tallyExtractName(fields);
+    if (!name) {
+      logger.warn({ fields: fields.map((f) => f.label) }, "Leads: Tally webhook missing name field");
+      return res.status(200).json({ ok: true, warning: "No name field found — lead not created" });
+    }
+
+    const email = tallyFieldString(fields, "INPUT_EMAIL", ["email"]);
+    const phone = tallyFieldString(fields, "INPUT_PHONE_NUMBER", ["phone", "mobile", "number"]);
+    const goal = tallyFieldString(fields, "TEXTAREA", ["goal", "objective", "tell us"]);
+
+    // Use submissionId as externalId to prevent duplicates on retries
+    const externalId = body.data?.submissionId ? `tally_${body.data.submissionId}` : null;
+
+    if (externalId) {
+      const [existing] = await db
+        .select({ id: leadsTable.id })
+        .from(leadsTable)
+        .where(eq(leadsTable.externalId, externalId))
+        .limit(1);
+      if (existing) {
+        logger.info({ externalId }, "Leads: Tally submission already exists, skipping");
+        return res.status(200).json({ ok: true, skipped: true });
+      }
+    }
+
+    const [lead] = await db
+      .insert(leadsTable)
+      .values({
+        name,
+        email: email ?? null,
+        phone: phone ?? null,
+        source: "facebook",
+        status: "new",
+        goalText: goal ?? null,
+        externalId: externalId ?? null,
+        notes: body.data?.formName ? `Form: ${body.data.formName}` : null,
+      })
+      .returning({ id: leadsTable.id });
+
+    logger.info({ leadId: lead.id, name }, "Leads: created from Tally webhook");
+    return res.status(200).json({ ok: true, leadId: lead.id });
+  } catch (err) {
+    logger.error({ err }, "Leads: Tally webhook failed");
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 export default router;
