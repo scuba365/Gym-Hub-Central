@@ -4,6 +4,7 @@ import {
   useListClients,
   useGetDashboardStats,
   useGetDashboardBirthdays,
+  useGetClassAnalytics,
   ListClientsEngagementStatus
 } from "@workspace/api-client-react";
 import { Card, CardContent } from "@/components/ui/card";
@@ -54,6 +55,7 @@ export default function Dashboard() {
 
   const { data: stats, isLoading: statsLoading } = useGetDashboardStats();
   const { data: birthdays } = useGetDashboardBirthdays();
+  const { data: classData } = useGetClassAnalytics();
 
   const { data: clients, isLoading: clientsLoading } = useListClients({
     search: search.length > 2 ? search : undefined,
@@ -192,6 +194,43 @@ export default function Dashboard() {
           valueClass={stats?.overdueInBodyCount ? "text-destructive" : ""}
         />
       </div>
+
+      {/* Class Analytics Summary */}
+      {classData && (
+        <Link href="/class-analytics">
+          <div className="mb-6 rounded-lg border border-border bg-card/40 hover:border-primary/40 transition-colors cursor-pointer">
+            <div className="px-4 py-2 border-b border-border flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <BarChart2 className="h-3.5 w-3.5 text-muted-foreground" />
+                <span className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Class Utilisation</span>
+              </div>
+              <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
+            </div>
+            <div className="grid grid-cols-4 divide-x divide-border">
+              <div className="px-4 py-3 text-center">
+                <p className="text-xl font-display font-bold text-foreground">{classData.summary.avgFillPct.toFixed(0)}%</p>
+                <p className="text-[10px] text-muted-foreground uppercase tracking-wider mt-0.5">Avg Fill</p>
+              </div>
+              <div className="px-4 py-3 text-center">
+                <p className="text-xl font-display font-bold text-foreground">{classData.summary.totalWeeklyAttendees}</p>
+                <p className="text-[10px] text-muted-foreground uppercase tracking-wider mt-0.5">Weekly Attendees</p>
+              </div>
+              <div className="px-4 py-3 text-center">
+                <p className={`text-xl font-display font-bold ${classData.summary.cutCandidates > 0 ? "text-destructive" : "text-foreground"}`}>
+                  {classData.summary.cutCandidates}
+                </p>
+                <p className="text-[10px] text-muted-foreground uppercase tracking-wider mt-0.5">Cut Candidates</p>
+              </div>
+              <div className="px-4 py-3 text-center">
+                <p className={`text-xl font-display font-bold ${classData.summary.fullClasses > 0 ? "text-green-500" : "text-foreground"}`}>
+                  {classData.summary.fullClasses}
+                </p>
+                <p className="text-[10px] text-muted-foreground uppercase tracking-wider mt-0.5">Full Classes</p>
+              </div>
+            </div>
+          </div>
+        </Link>
+      )}
 
       {/* Tab Nav */}
       <div className="flex items-center gap-1 mb-6 border-b border-border pb-0">
