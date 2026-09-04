@@ -40,7 +40,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, Plus, Trash2, Phone, Mail, UserPlus, Search } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Phone, Mail, UserPlus, Search, MessageCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -423,6 +423,14 @@ export default function Leads() {
   );
 }
 
+function toWhatsAppHref(phone: string | null | undefined): string | null {
+  if (!phone) return null;
+  const digits = phone.replace(/[^\d+]/g, "");
+  if (digits.startsWith("+")) return `https://wa.me/${digits.replace("+", "")}`;
+  const local = digits.replace(/^0/, "");
+  return `https://wa.me/353${local}`;
+}
+
 // ─── Lead Card ────────────────────────────────────────────────────────────────
 
 function LeadCard({
@@ -458,14 +466,28 @@ function LeadCard({
         {/* Contact */}
         <div className="space-y-1">
           {lead.phone && (
-            <a
-              href={`tel:${lead.phone}`}
-              onClick={(e) => e.stopPropagation()}
-              className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground"
-            >
-              <Phone className="h-3 w-3" />
-              {lead.phone}
-            </a>
+            <div className="flex items-center gap-2">
+              <a
+                href={`tel:${lead.phone}`}
+                onClick={(e) => e.stopPropagation()}
+                className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground"
+              >
+                <Phone className="h-3 w-3" />
+                {lead.phone}
+              </a>
+              {toWhatsAppHref(lead.phone) && (
+                <a
+                  href={toWhatsAppHref(lead.phone)!}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={(e) => e.stopPropagation()}
+                  className="text-muted-foreground hover:text-green-500 transition-colors"
+                  title="WhatsApp"
+                >
+                  <MessageCircle className="h-3.5 w-3.5" />
+                </a>
+              )}
+            </div>
           )}
           {lead.email && (
             <a
