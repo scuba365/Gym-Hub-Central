@@ -11,4 +11,6 @@ export interface MetaAdsReport {
   weeks: MetaAdsWeek[];
   currency: string;
   adAccountName: string;
+  /** Whether GoTeamUp token is configured and sales data is available */
+  gtuConnected: boolean;
 }

@@ -1652,6 +1652,12 @@ components:
         conversionValue:
           type: number
           description: Total conversion value tracked in Meta
+        gtuSales:
+          type: integer
+          description: GoTeamUp trial/challenge signups whose start_date falls in this week
+        gtuRevenue:
+          type: number
+          description: Actual revenue from GoTeamUp signups this week (sum of membership prices)
       required:
         - weekStart
         - weekEnd
@@ -1662,6 +1668,8 @@ components:
         - leads
         - conversions
         - conversionValue
+        - gtuSales
+        - gtuRevenue
 
     MetaAdsReport:
       type: object
@@ -1674,7 +1682,11 @@ components:
           type: string
         adAccountName:
           type: string
+        gtuConnected:
+          type: boolean
+          description: Whether GoTeamUp token is configured and sales data is available
       required:
         - weeks
         - currency
         - adAccountName
+        - gtuConnected

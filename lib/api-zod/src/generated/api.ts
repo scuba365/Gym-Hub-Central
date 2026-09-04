@@ -765,10 +765,13 @@ export const GetMetaAdsReportResponse = zod.object({
   "ctr": zod.number().describe('Link click-through rate as a percentage'),
   "leads": zod.number().describe('Lead actions from Meta (form fills, etc.)'),
   "conversions": zod.number().describe('Purchase\/conversion actions tracked in Meta'),
-  "conversionValue": zod.number().describe('Total conversion value tracked in Meta')
+  "conversionValue": zod.number().describe('Total conversion value tracked in Meta'),
+  "gtuSales": zod.number().describe('GoTeamUp trial\/challenge signups whose start_date falls in this week'),
+  "gtuRevenue": zod.number().describe('Actual revenue from GoTeamUp signups this week (sum of membership prices)')
 })),
   "currency": zod.string(),
-  "adAccountName": zod.string()
+  "adAccountName": zod.string(),
+  "gtuConnected": zod.boolean().describe('Whether GoTeamUp token is configured and sales data is available')
 })
 
 

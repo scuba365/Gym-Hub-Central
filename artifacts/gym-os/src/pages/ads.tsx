@@ -30,6 +30,8 @@ interface WeekMetrics {
   leads: number;
   conversions: number;
   conversionValue: number;
+  gtuSales: number;
+  gtuRevenue: number;
   // calculated
   pageConvRate: number;
   leadToSaleRate: number;
@@ -63,8 +65,13 @@ export default function Ads() {
   const weeks: WeekMetrics[] = (data?.weeks ?? []).map((w) => {
     const spend = w.spend;
     const leads = w.leads;
-    const sales = w.conversions;
-    const cvValue = w.conversionValue > 0 ? w.conversionValue : sales * programPrice;
+    // Use GoTeamUp actual signups as sales; fall back to Meta pixel conversions
+    const sales = (w.gtuSales ?? 0) > 0 ? (w.gtuSales ?? 0) : w.conversions;
+    // Use GTU actual revenue if available; otherwise estimate from program price
+    const cvValue =
+      (w.gtuRevenue ?? 0) > 0 ? (w.gtuRevenue ?? 0) :
+      w.conversionValue > 0 ? w.conversionValue :
+      sales * programPrice;
 
     const pageConvRate = w.clicks > 0 ? (leads / w.clicks) * 100 : 0;
     const leadToSaleRate = leads > 0 ? (sales / leads) * 100 : 0;
@@ -90,23 +97,29 @@ export default function Ads() {
   });
 
   const totals = weeks.reduce(
-    (acc, w) => ({
-      spend: acc.spend + w.spend,
-      impressions: acc.impressions + w.impressions,
-      clicks: acc.clicks + w.clicks,
-      leads: acc.leads + w.leads,
-      conversions: acc.conversions + w.conversions,
-      conversionValue: acc.conversionValue + w.conversionValue,
-      newMembers: acc.newMembers + w.newMembers,
-      memberRevenue: acc.memberRevenue + w.memberRevenue,
-    }),
-    { spend: 0, impressions: 0, clicks: 0, leads: 0, conversions: 0, conversionValue: 0, newMembers: 0, memberRevenue: 0 }
+    (acc, w) => {
+      const sales = (w.gtuSales ?? 0) > 0 ? (w.gtuSales ?? 0) : w.conversions;
+      const cvValue =
+        (w.gtuRevenue ?? 0) > 0 ? (w.gtuRevenue ?? 0) :
+        w.conversionValue > 0 ? w.conversionValue :
+        sales * programPrice;
+      return {
+        spend: acc.spend + w.spend,
+        impressions: acc.impressions + w.impressions,
+        clicks: acc.clicks + w.clicks,
+        leads: acc.leads + w.leads,
+        sales: acc.sales + sales,
+        cvValue: acc.cvValue + cvValue,
+        newMembers: acc.newMembers + w.newMembers,
+        memberRevenue: acc.memberRevenue + w.memberRevenue,
+      };
+    },
+    { spend: 0, impressions: 0, clicks: 0, leads: 0, sales: 0, cvValue: 0, newMembers: 0, memberRevenue: 0 }
   );
 
   const totalCpl = totals.leads > 0 ? totals.spend / totals.leads : 0;
-  const totalCpa = totals.conversions > 0 ? totals.spend / totals.conversions : 0;
-  const totalCvValue = totals.conversionValue > 0 ? totals.conversionValue : totals.conversions * programPrice;
-  const totalRoas = totals.spend > 0 ? totalCvValue / totals.spend : 0;
+  const totalCpa = totals.sales > 0 ? totals.spend / totals.sales : 0;
+  const totalRoas = totals.spend > 0 ? totals.cvValue / totals.spend : 0;
 
   return (
     <div className="min-h-screen bg-background p-4 md:p-8 max-w-7xl mx-auto">
@@ -216,7 +229,7 @@ export default function Ads() {
             {[
               { label: "Total Spend", value: fmtEuro(totals.spend) },
               { label: "Total Leads", value: fmt(totals.leads) },
-              { label: "Cost Per Lead", value: totalCpl > 0 ? fmtEuro(totalCpl) : "—" },
+              { label: "Total Sales (GTU)", value: fmt(totals.sales) },
               { label: "ROAS", value: totalRoas > 0 ? `${fmt(totalRoas, 1)}×` : "—" },
             ].map((s) => (
               <Card key={s.label} className="border-border/50">
@@ -276,12 +289,17 @@ export default function Ads() {
                           <td className="text-right px-3 py-2.5">{fmtPct(w.ctr)}</td>
                           <td className="text-right px-3 py-2.5 font-medium">{fmt(w.leads)}</td>
                           <td className="text-right px-3 py-2.5 text-muted-foreground">{fmtPct(w.pageConvRate)}</td>
-                          <td className="text-right px-3 py-2.5 font-medium">{fmt(w.conversions)}</td>
+                          <td className="text-right px-3 py-2.5 font-medium">
+                            {(() => {
+                              const sales = (w.gtuSales ?? 0) > 0 ? (w.gtuSales ?? 0) : w.conversions;
+                              return fmt(sales);
+                            })()}
+                          </td>
                           <td className="text-right px-3 py-2.5 text-muted-foreground">
                             {w.leads > 0 ? fmtPct(w.leadToSaleRate) : "—"}
                           </td>
                           <td className="text-right px-3 py-2.5">{w.leads > 0 ? fmtEuro(w.cpl) : "—"}</td>
-                          <td className="text-right px-3 py-2.5">{w.conversions > 0 ? fmtEuro(w.cpa) : "—"}</td>
+                          <td className="text-right px-3 py-2.5">{w.cpa > 0 ? fmtEuro(w.cpa) : "—"}</td>
                           <td className="text-right px-3 py-2.5 font-medium">
                             {w.roas > 0 ? `${fmt(w.roas, 1)}×` : "—"}
                           </td>
@@ -305,9 +323,9 @@ export default function Ads() {
                         <td className="text-right px-3 py-2.5 text-muted-foreground">
                           {totals.clicks > 0 ? fmtPct((totals.leads / totals.clicks) * 100) : "—"}
                         </td>
-                        <td className="text-right px-3 py-2.5">{fmt(totals.conversions)}</td>
+                        <td className="text-right px-3 py-2.5">{fmt(totals.sales)}</td>
                         <td className="text-right px-3 py-2.5 text-muted-foreground">
-                          {totals.leads > 0 ? fmtPct((totals.conversions / totals.leads) * 100) : "—"}
+                          {totals.leads > 0 ? fmtPct((totals.sales / totals.leads) * 100) : "—"}
                         </td>
                         <td className="text-right px-3 py-2.5">{totalCpl > 0 ? fmtEuro(totalCpl) : "—"}</td>
                         <td className="text-right px-3 py-2.5">{totalCpa > 0 ? fmtEuro(totalCpa) : "—"}</td>
@@ -325,7 +343,7 @@ export default function Ads() {
           )}
 
           <p className="text-xs text-muted-foreground mt-4">
-            Sales = purchase/conversion events tracked in Meta pixel. If you don't use Meta pixel, sales will show 0 — ROAS is estimated from program price × sales. Member Revenue projection = Sales × Member Conv% × Membership Price × Avg Stay.
+            Sales = GoTeamUp 6-week challenge/trial signups whose start date falls in that week. ROAS uses actual GoTeamUp revenue if available, otherwise estimates from Program Price × Sales. Member Revenue = Sales × Member Conv% × Membership Price × Avg Stay.
           </p>
         </>
       )}

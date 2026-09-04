@@ -608,12 +608,18 @@ export interface MetaAdsWeek {
   conversions: number;
   /** Total conversion value tracked in Meta */
   conversionValue: number;
+  /** GoTeamUp trial/challenge signups whose start_date falls in this week */
+  gtuSales: number;
+  /** Actual revenue from GoTeamUp signups this week (sum of membership prices) */
+  gtuRevenue: number;
 }
 
 export interface MetaAdsReport {
   weeks: MetaAdsWeek[];
   currency: string;
   adAccountName: string;
+  /** Whether GoTeamUp token is configured and sales data is available */
+  gtuConnected: boolean;
 }
 
 export type ListClientsParams = {

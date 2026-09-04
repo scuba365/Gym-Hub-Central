@@ -22,4 +22,8 @@ export interface MetaAdsWeek {
   conversions: number;
   /** Total conversion value tracked in Meta */
   conversionValue: number;
+  /** GoTeamUp trial/challenge signups whose start_date falls in this week */
+  gtuSales: number;
+  /** Actual revenue from GoTeamUp signups this week (sum of membership prices) */
+  gtuRevenue: number;
 }
