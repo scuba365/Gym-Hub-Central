@@ -37,6 +37,8 @@ export * from './errorResponse';
 export * from './expiringMembership';
 export * from './getMembershipDrilldownCategory';
 export * from './getMembershipDrilldownParams';
+export * from './getMetaAdsReportParams';
+export * from './getMetaAdsReportPeriod';
 export * from './healthStatus';
 export * from './inBodyScan';
 export * from './lead';

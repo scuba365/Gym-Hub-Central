@@ -673,3 +673,18 @@ export type ListLeadsParams = {
 status?: LeadStatus;
 };
 
+export type GetMetaAdsReportParams = {
+period?: GetMetaAdsReportPeriod;
+};
+
+export type GetMetaAdsReportPeriod = typeof GetMetaAdsReportPeriod[keyof typeof GetMetaAdsReportPeriod];
+
+
+export const GetMetaAdsReportPeriod = {
+  '7d': '7d',
+  '30d': '30d',
+  '90d': '90d',
+  '180d': '180d',
+  '365d': '365d',
+} as const;
+

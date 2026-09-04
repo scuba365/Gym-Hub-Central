@@ -762,9 +762,15 @@ export const SyncLeadsFromMetaResponse = zod.object({
 
 
 /**
- * Returns the last 8 weeks of Meta Ads insights (spend, impressions, clicks, leads, conversions)
+ * Returns Meta Ads insights for the selected period
  * @summary Fetch Meta Ads weekly performance data
  */
+export const getMetaAdsReportQueryPeriodDefault = `90d`;
+
+export const GetMetaAdsReportQueryParams = zod.object({
+  "period": zod.enum(['7d', '30d', '90d', '180d', '365d']).default(getMetaAdsReportQueryPeriodDefault)
+})
+
 export const GetMetaAdsReportResponse = zod.object({
   "weeks": zod.array(zod.object({
   "weekStart": zod.string().describe('ISO date YYYY-MM-DD'),

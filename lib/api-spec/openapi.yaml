@@ -732,7 +732,14 @@ paths:
       operationId: getMetaAdsReport
       tags: [ads]
       summary: Fetch Meta Ads weekly performance data
-      description: Returns the last 8 weeks of Meta Ads insights (spend, impressions, clicks, leads, conversions)
+      description: Returns Meta Ads insights for the selected period
+      parameters:
+        - name: period
+          in: query
+          schema:
+            type: string
+            enum: [7d, 30d, 90d, 180d, 365d]
+            default: 90d
       responses:
         "200":
           description: Meta Ads report

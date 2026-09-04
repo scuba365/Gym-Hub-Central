@@ -4,7 +4,21 @@ import { GOTEAMUP_BASE, PAGE_SIZE, goteamupFetchAll } from "../lib/goteamup";
 
 const router = Router();
 const GRAPH_BASE = "https://graph.facebook.com/v20.0";
-const WEEKS_BACK = 8;
+
+const PERIOD_DAYS: Record<string, number> = {
+  "7d": 7,
+  "30d": 30,
+  "90d": 90,
+  "180d": 180,
+  "365d": 365,
+};
+
+// Choose Meta time_increment based on period length
+function timeIncrement(days: number): number {
+  if (days <= 7) return 1;   // daily
+  if (days <= 90) return 7;  // weekly
+  return 28;                 // ~monthly
+}
 
 const TRIAL_PLAN_NAMES = new Set([
   "30 day trial",
@@ -76,9 +90,12 @@ router.get("/ads/meta", async (req, res) => {
   }
 
   try {
+    const periodKey = (req.query.period as string) || "90d";
+    const days = PERIOD_DAYS[periodKey] ?? 90;
+
     const endDate = new Date();
     const startDate = new Date();
-    startDate.setDate(startDate.getDate() - WEEKS_BACK * 7);
+    startDate.setDate(startDate.getDate() - days);
 
     const since = startDate.toISOString().split("T")[0];
     const until = endDate.toISOString().split("T")[0];
@@ -89,7 +106,7 @@ router.get("/ads/meta", async (req, res) => {
       `${GRAPH_BASE}/${adAccountId}/insights` +
       `?fields=${encodeURIComponent(fields)}` +
       `&time_range=${encodeURIComponent(JSON.stringify({ since, until }))}` +
-      `&time_increment=7` +
+      `&time_increment=${timeIncrement(days)}` +
       `&level=account` +
       `&access_token=${metaToken}`;
 

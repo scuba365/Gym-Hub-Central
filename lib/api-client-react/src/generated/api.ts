@@ -34,6 +34,7 @@ import type {
   DashboardStats,
   ErrorResponse,
   GetMembershipDrilldownParams,
+  GetMetaAdsReportParams,
   HealthStatus,
   InBodyScan,
   Lead,
@@ -2308,21 +2309,28 @@ export const useSyncLeadsFromMeta = <TError = ErrorType<ErrorResponse>,
       return useMutation(getSyncLeadsFromMetaMutationOptions(options));
     }
 
-export const getGetMetaAdsReportUrl = () => {
+export const getGetMetaAdsReportUrl = (params?: GetMetaAdsReportParams,) => {
+  const normalizedParams = new URLSearchParams();
 
+  Object.entries(params || {}).forEach(([key, value]) => {
 
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
 
+  const stringifiedParams = normalizedParams.toString();
 
-  return `/api/ads/meta`
+  return stringifiedParams.length > 0 ? `/api/ads/meta?${stringifiedParams}` : `/api/ads/meta`
 }
 
 /**
- * Returns the last 8 weeks of Meta Ads insights (spend, impressions, clicks, leads, conversions)
+ * Returns Meta Ads insights for the selected period
  * @summary Fetch Meta Ads weekly performance data
  */
-export const getMetaAdsReport = async ( options?: RequestInit): Promise<MetaAdsReport> => {
+export const getMetaAdsReport = async (params?: GetMetaAdsReportParams, options?: RequestInit): Promise<MetaAdsReport> => {
 
-  return customFetch<MetaAdsReport>(getGetMetaAdsReportUrl(),
+  return customFetch<MetaAdsReport>(getGetMetaAdsReportUrl(params),
   {
     ...options,
     method: 'GET'
@@ -2335,23 +2343,23 @@ export const getMetaAdsReport = async ( options?: RequestInit): Promise<MetaAdsR
 
 
 
-export const getGetMetaAdsReportQueryKey = () => {
+export const getGetMetaAdsReportQueryKey = (params?: GetMetaAdsReportParams,) => {
     return [
-    `/api/ads/meta`
+    `/api/ads/meta`, ...(params ? [params] : [])
     ] as const;
     }
 
 
-export const getGetMetaAdsReportQueryOptions = <TData = Awaited<ReturnType<typeof getMetaAdsReport>>, TError = ErrorType<ErrorResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMetaAdsReport>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export const getGetMetaAdsReportQueryOptions = <TData = Awaited<ReturnType<typeof getMetaAdsReport>>, TError = ErrorType<ErrorResponse>>(params?: GetMetaAdsReportParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMetaAdsReport>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getGetMetaAdsReportQueryKey();
+  const queryKey =  queryOptions?.queryKey ?? getGetMetaAdsReportQueryKey(params);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getMetaAdsReport>>> = ({ signal }) => getMetaAdsReport({ signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getMetaAdsReport>>> = ({ signal }) => getMetaAdsReport(params, { signal, ...requestOptions });
 
 
 
@@ -2369,11 +2377,11 @@ export type GetMetaAdsReportQueryError = ErrorType<ErrorResponse>
  */
 
 export function useGetMetaAdsReport<TData = Awaited<ReturnType<typeof getMetaAdsReport>>, TError = ErrorType<ErrorResponse>>(
-  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMetaAdsReport>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+ params?: GetMetaAdsReportParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMetaAdsReport>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
-  const queryOptions = getGetMetaAdsReportQueryOptions(options)
+  const queryOptions = getGetMetaAdsReportQueryOptions(params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

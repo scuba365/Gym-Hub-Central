@@ -1,12 +1,20 @@
 import React, { useState } from "react";
 import { Link } from "wouter";
-import { useGetMetaAdsReport } from "@workspace/api-client-react";
+import { useGetMetaAdsReport, GetMetaAdsReportPeriod } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, TrendingUp, AlertCircle, CheckCircle2, Euro } from "lucide-react";
+import { ArrowLeft, TrendingUp, AlertCircle, CheckCircle2 } from "lucide-react";
+
+const PERIODS: { value: GetMetaAdsReportPeriod; label: string }[] = [
+  { value: "7d", label: "1W" },
+  { value: "30d", label: "1M" },
+  { value: "90d", label: "3M" },
+  { value: "180d", label: "6M" },
+  { value: "365d", label: "1Y" },
+];
 
 function fmt(n: number, decimals = 0): string {
   return n.toLocaleString("en-IE", { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
@@ -51,7 +59,8 @@ function formatWeekLabel(start: string, end: string): string {
 }
 
 export default function Ads() {
-  const { data, isLoading, error } = useGetMetaAdsReport();
+  const [period, setPeriod] = useState<GetMetaAdsReportPeriod>("90d");
+  const { data, isLoading, error } = useGetMetaAdsReport({ period });
 
   const [memberConvPct, setMemberConvPct] = useState(50);
   const [avgStayMonths, setAvgStayMonths] = useState(12);
@@ -141,6 +150,23 @@ export default function Ads() {
             </p>
           )}
         </div>
+        {/* Period filter */}
+        <div className="flex items-center gap-1 bg-muted/40 rounded-lg p-1">
+          {PERIODS.map((p) => (
+            <button
+              key={p.value}
+              onClick={() => setPeriod(p.value)}
+              className={`px-3 py-1 rounded-md text-xs font-semibold transition-colors ${
+                period === p.value
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {p.label}
+            </button>
+          ))}
+        </div>
+
         {!isLoading && !notConfigured && data && (
           <Badge className="bg-green-500/20 text-green-400 border-green-500/30 flex items-center gap-1">
             <CheckCircle2 className="h-3 w-3" />
