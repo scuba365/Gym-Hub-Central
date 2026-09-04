@@ -8,6 +8,7 @@ import Reports from "@/pages/reports";
 import Growth from "@/pages/growth";
 import ClassAnalytics from "@/pages/class-analytics";
 import Leads from "@/pages/leads";
+import Ads from "@/pages/ads";
 import NotFound from "@/pages/not-found";
 
 const queryClient = new QueryClient();
@@ -21,6 +22,7 @@ function Router() {
       <Route path="/growth" component={Growth} />
       <Route path="/class-analytics" component={ClassAnalytics} />
       <Route path="/leads" component={Leads} />
+      <Route path="/ads" component={Ads} />
       <Route component={NotFound} />
     </Switch>
   );

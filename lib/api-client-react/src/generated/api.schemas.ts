@@ -592,6 +592,30 @@ export interface LeadPromoteResult {
   clientId: number;
 }
 
+export interface MetaAdsWeek {
+  /** ISO date YYYY-MM-DD */
+  weekStart: string;
+  /** ISO date YYYY-MM-DD */
+  weekEnd: string;
+  spend: number;
+  impressions: number;
+  clicks: number;
+  /** Link click-through rate as a percentage */
+  ctr: number;
+  /** Lead actions from Meta (form fills, etc.) */
+  leads: number;
+  /** Purchase/conversion actions tracked in Meta */
+  conversions: number;
+  /** Total conversion value tracked in Meta */
+  conversionValue: number;
+}
+
+export interface MetaAdsReport {
+  weeks: MetaAdsWeek[];
+  currency: string;
+  adAccountName: string;
+}
+
 export type ListClientsParams = {
 search?: string;
 engagementStatus?: ListClientsEngagementStatus;

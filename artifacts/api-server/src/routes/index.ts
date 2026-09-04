@@ -8,6 +8,7 @@ import inbodyImportRouter from "./inbody-import";
 import aiRouter from "./ai";
 import reportsRouter from "./reports";
 import leadsRouter from "./leads";
+import adsRouter from "./ads";
 
 const router: IRouter = Router();
 
@@ -20,5 +21,6 @@ router.use(inbodyImportRouter);
 router.use(aiRouter);
 router.use(reportsRouter);
 router.use(leadsRouter);
+router.use(adsRouter);
 
 export default router;

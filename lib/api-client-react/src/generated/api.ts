@@ -46,6 +46,7 @@ import type {
   MacroUpdate,
   MembershipDrilldown,
   MembershipReport,
+  MetaAdsReport,
   SyncResult,
   UpcomingBirthday
 } from './api.schemas';
@@ -2236,4 +2237,82 @@ export const useSyncLeadsFromGoteamup = <TError = ErrorType<unknown>,
       > => {
       return useMutation(getSyncLeadsFromGoteamupMutationOptions(options));
     }
+
+export const getGetMetaAdsReportUrl = () => {
+
+
+
+
+  return `/api/ads/meta`
+}
+
+/**
+ * Returns the last 8 weeks of Meta Ads insights (spend, impressions, clicks, leads, conversions)
+ * @summary Fetch Meta Ads weekly performance data
+ */
+export const getMetaAdsReport = async ( options?: RequestInit): Promise<MetaAdsReport> => {
+
+  return customFetch<MetaAdsReport>(getGetMetaAdsReportUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetMetaAdsReportQueryKey = () => {
+    return [
+    `/api/ads/meta`
+    ] as const;
+    }
+
+
+export const getGetMetaAdsReportQueryOptions = <TData = Awaited<ReturnType<typeof getMetaAdsReport>>, TError = ErrorType<ErrorResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMetaAdsReport>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetMetaAdsReportQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getMetaAdsReport>>> = ({ signal }) => getMetaAdsReport({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getMetaAdsReport>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetMetaAdsReportQueryResult = NonNullable<Awaited<ReturnType<typeof getMetaAdsReport>>>
+export type GetMetaAdsReportQueryError = ErrorType<ErrorResponse>
+
+
+/**
+ * @summary Fetch Meta Ads weekly performance data
+ */
+
+export function useGetMetaAdsReport<TData = Awaited<ReturnType<typeof getMetaAdsReport>>, TError = ErrorType<ErrorResponse>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMetaAdsReport>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetMetaAdsReportQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
 

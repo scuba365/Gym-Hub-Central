@@ -56,5 +56,7 @@ export * from './membershipDrilldown';
 export * from './membershipDrilldownMember';
 export * from './membershipMonthData';
 export * from './membershipReport';
+export * from './metaAdsReport';
+export * from './metaAdsWeek';
 export * from './syncResult';
 export * from './upcomingBirthday';

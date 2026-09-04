@@ -20,6 +20,8 @@ tags:
     description: AI-powered client insights and suggestions
   - name: leads
     description: Lead pipeline management
+  - name: ads
+    description: Meta Ads performance data
 
 paths:
   /healthz:
@@ -705,6 +707,26 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/LeadSyncResult"
+
+  /ads/meta:
+    get:
+      operationId: getMetaAdsReport
+      tags: [ads]
+      summary: Fetch Meta Ads weekly performance data
+      description: Returns the last 8 weeks of Meta Ads insights (spend, impressions, clicks, leads, conversions)
+      responses:
+        "200":
+          description: Meta Ads report
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MetaAdsReport"
+        "503":
+          description: Meta credentials not configured
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 
 components:
   schemas:
@@ -1602,3 +1624,57 @@ components:
           type: integer
       required:
         - clientId
+
+    MetaAdsWeek:
+      type: object
+      properties:
+        weekStart:
+          type: string
+          description: ISO date YYYY-MM-DD
+        weekEnd:
+          type: string
+          description: ISO date YYYY-MM-DD
+        spend:
+          type: number
+        impressions:
+          type: integer
+        clicks:
+          type: integer
+        ctr:
+          type: number
+          description: Link click-through rate as a percentage
+        leads:
+          type: integer
+          description: Lead actions from Meta (form fills, etc.)
+        conversions:
+          type: integer
+          description: Purchase/conversion actions tracked in Meta
+        conversionValue:
+          type: number
+          description: Total conversion value tracked in Meta
+      required:
+        - weekStart
+        - weekEnd
+        - spend
+        - impressions
+        - clicks
+        - ctr
+        - leads
+        - conversions
+        - conversionValue
+
+    MetaAdsReport:
+      type: object
+      properties:
+        weeks:
+          type: array
+          items:
+            $ref: "#/components/schemas/MetaAdsWeek"
+        currency:
+          type: string
+        adAccountName:
+          type: string
+      required:
+        - weeks
+        - currency
+        - adAccountName

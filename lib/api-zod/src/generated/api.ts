@@ -751,3 +751,24 @@ export const SyncLeadsFromGoteamupResponse = zod.object({
 })
 
 
+/**
+ * Returns the last 8 weeks of Meta Ads insights (spend, impressions, clicks, leads, conversions)
+ * @summary Fetch Meta Ads weekly performance data
+ */
+export const GetMetaAdsReportResponse = zod.object({
+  "weeks": zod.array(zod.object({
+  "weekStart": zod.string().describe('ISO date YYYY-MM-DD'),
+  "weekEnd": zod.string().describe('ISO date YYYY-MM-DD'),
+  "spend": zod.number(),
+  "impressions": zod.number(),
+  "clicks": zod.number(),
+  "ctr": zod.number().describe('Link click-through rate as a percentage'),
+  "leads": zod.number().describe('Lead actions from Meta (form fills, etc.)'),
+  "conversions": zod.number().describe('Purchase\/conversion actions tracked in Meta'),
+  "conversionValue": zod.number().describe('Total conversion value tracked in Meta')
+})),
+  "currency": zod.string(),
+  "adAccountName": zod.string()
+})
+
+
