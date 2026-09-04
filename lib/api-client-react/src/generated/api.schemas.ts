@@ -588,6 +588,10 @@ export interface LeadSyncResult {
   errors: number;
 }
 
+export interface LeadPromoteResult {
+  clientId: number;
+}
+
 export type ListClientsParams = {
 search?: string;
 engagementStatus?: ListClientsEngagementStatus;

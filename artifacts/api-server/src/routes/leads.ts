@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { db, leadsTable } from "@workspace/db";
+import { db, leadsTable, clientsTable } from "@workspace/db";
 import { eq, desc, sql } from "drizzle-orm";
 import { GOTEAMUP_BASE, PAGE_SIZE, goteamupFetch, goteamupFetchAll, type PaginatedResponse } from "../lib/goteamup";
 import { logger } from "../lib/logger";
@@ -142,6 +142,48 @@ router.delete("/leads/:id", async (req, res) => {
     return res.status(204).send();
   } catch (err) {
     console.error(err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ─── Promote lead → client ────────────────────────────────────────────────────
+
+router.post("/leads/:id/promote", async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    if (!id) return res.status(400).json({ error: "Invalid id" });
+
+    const [lead] = await db.select().from(leadsTable).where(eq(leadsTable.id, id)).limit(1);
+    if (!lead) return res.status(404).json({ error: "Lead not found" });
+
+    // Check for duplicate email
+    if (lead.email) {
+      const [existing] = await db
+        .select({ id: clientsTable.id })
+        .from(clientsTable)
+        .where(eq(clientsTable.email, lead.email))
+        .limit(1);
+      if (existing) return res.status(409).json({ error: "A client with this email already exists" });
+    }
+
+    const [client] = await db
+      .insert(clientsTable)
+      .values({
+        name: lead.name,
+        email: lead.email ?? null,
+        phone: lead.phone ?? null,
+        goals: lead.goalText ?? null,
+        notes: lead.notes ?? null,
+        isMember: true,
+        needsMealPlan: false,
+        engagementStatus: "unknown",
+      })
+      .returning({ id: clientsTable.id });
+
+    logger.info({ leadId: id, clientId: client.id }, "Leads: promoted lead to client");
+    return res.json({ clientId: client.id });
+  } catch (err) {
+    logger.error({ err }, "Leads: promote failed");
     return res.status(500).json({ error: "Internal server error" });
   }
 });

@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from "react";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import {
   useListLeads,
   useCreateLead,
@@ -7,6 +7,7 @@ import {
   useDeleteLead,
   getListLeadsQueryKey,
   useSyncLeadsFromGoteamup,
+  usePromoteLeadToClient,
 } from "@workspace/api-client-react";
 import type { Lead, LeadStatus, LeadSource } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -150,6 +151,7 @@ const EMPTY_FORM: LeadForm = {
 export default function Leads() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const [, navigate] = useLocation();
 
   const [activeStatus, setActiveStatus] = useState<LeadStatus | "all">("all");
   const [search, setSearch] = useState("");
@@ -200,6 +202,18 @@ export default function Leads() {
         toast({ title: `GoTeamUp sync: ${result.created} new, ${result.skipped} already existed` });
       },
       onError: () => toast({ title: "GoTeamUp sync failed", variant: "destructive" }),
+    },
+  });
+
+  const promoteMutation = usePromoteLeadToClient({
+    mutation: {
+      onSuccess: (result) => {
+        queryClient.invalidateQueries({ queryKey: getListLeadsQueryKey() });
+        toast({ title: "Client created — redirecting…" });
+        setTimeout(() => navigate(`/clients/${result.clientId}`), 800);
+      },
+      onError: (err: { message?: string }) =>
+        toast({ title: err?.message ?? "Failed to create client", variant: "destructive" }),
     },
   });
 
@@ -388,6 +402,8 @@ export default function Leads() {
               onEdit={() => setEditLead(lead)}
               onDelete={() => setDeleteLead(lead)}
               onStatusChange={(s) => handleStatusChange(lead, s)}
+              onPromote={() => promoteMutation.mutate({ id: lead.id })}
+              promoting={promoteMutation.isPending}
             />
           ))}
         </div>
@@ -473,11 +489,15 @@ function LeadCard({
   onEdit,
   onDelete,
   onStatusChange,
+  onPromote,
+  promoting,
 }: {
   lead: Lead;
   onEdit: () => void;
   onDelete: () => void;
   onStatusChange: (s: LeadStatus) => void;
+  onPromote: () => void;
+  promoting: boolean;
 }) {
   const createdDate = lead.createdAt ? new Date(lead.createdAt).toLocaleDateString("en-IE") : null;
   const today = new Date().toISOString().split("T")[0];
@@ -580,6 +600,21 @@ function LeadCard({
             <Trash2 className="h-3.5 w-3.5" />
           </Button>
         </div>
+
+        {/* Promote to client */}
+        {lead.status === "converted" && (
+          <div onClick={(e) => e.stopPropagation()}>
+            <Button
+              size="sm"
+              variant="outline"
+              className="w-full h-7 text-xs border-green-500/40 text-green-600 hover:bg-green-500/10"
+              onClick={onPromote}
+              disabled={promoting}
+            >
+              {promoting ? "Creating…" : "⬆ Create Client Record"}
+            </Button>
+          </div>
+        )}
 
         {/* Date */}
         {createdDate && (

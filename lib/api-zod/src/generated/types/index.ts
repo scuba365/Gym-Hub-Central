@@ -40,6 +40,7 @@ export * from './healthStatus';
 export * from './inBodyScan';
 export * from './lead';
 export * from './leadCreate';
+export * from './leadPromoteResult';
 export * from './leadSource';
 export * from './leadStatus';
 export * from './leadSyncResult';

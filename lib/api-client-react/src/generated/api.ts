@@ -38,6 +38,7 @@ import type {
   InBodyScan,
   Lead,
   LeadCreate,
+  LeadPromoteResult,
   LeadSyncResult,
   LeadUpdate,
   ListClientsParams,
@@ -2094,6 +2095,76 @@ export const useDeleteLead = <TError = ErrorType<ErrorResponse>,
         TContext
       > => {
       return useMutation(getDeleteLeadMutationOptions(options));
+    }
+
+export const getPromoteLeadToClientUrl = (id: number,) => {
+
+
+
+
+  return `/api/leads/${id}/promote`
+}
+
+/**
+ * @summary Create a client record from a converted lead
+ */
+export const promoteLeadToClient = async (id: number, options?: RequestInit): Promise<LeadPromoteResult> => {
+
+  return customFetch<LeadPromoteResult>(getPromoteLeadToClientUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getPromoteLeadToClientMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof promoteLeadToClient>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof promoteLeadToClient>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['promoteLeadToClient'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof promoteLeadToClient>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  promoteLeadToClient(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PromoteLeadToClientMutationResult = NonNullable<Awaited<ReturnType<typeof promoteLeadToClient>>>
+
+    export type PromoteLeadToClientMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Create a client record from a converted lead
+ */
+export const usePromoteLeadToClient = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof promoteLeadToClient>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof promoteLeadToClient>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getPromoteLeadToClientMutationOptions(options));
     }
 
 export const getSyncLeadsFromGoteamupUrl = () => {

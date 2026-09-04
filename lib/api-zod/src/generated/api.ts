@@ -730,6 +730,18 @@ export const DeleteLeadParams = zod.object({
 
 
 /**
+ * @summary Create a client record from a converted lead
+ */
+export const PromoteLeadToClientParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const PromoteLeadToClientResponse = zod.object({
+  "clientId": zod.number()
+})
+
+
+/**
  * @summary Import trial members from GoTeamUp as leads
  */
 export const SyncLeadsFromGoteamupResponse = zod.object({
