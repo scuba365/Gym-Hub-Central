@@ -5,6 +5,7 @@
  * Gym OS API — unified client data from TeamUp, Trainerize, and InBody
  * OpenAPI spec version: 0.1.0
  */
+import type { ChallengeConversionStats } from './challengeConversionStats';
 import type { MetaAdsWeek } from './metaAdsWeek';
 
 export interface MetaAdsReport {
@@ -13,4 +14,5 @@ export interface MetaAdsReport {
   adAccountName: string;
   /** Whether GoTeamUp token is configured and sales data is available */
   gtuConnected: boolean;
+  challengeToSgpt?: ChallengeConversionStats;
 }

@@ -2238,6 +2238,76 @@ export const useSyncLeadsFromGoteamup = <TError = ErrorType<unknown>,
       return useMutation(getSyncLeadsFromGoteamupMutationOptions(options));
     }
 
+export const getSyncLeadsFromMetaUrl = () => {
+
+
+
+
+  return `/api/leads/sync/meta`
+}
+
+/**
+ * @summary Import Meta lead gen form submissions as leads
+ */
+export const syncLeadsFromMeta = async ( options?: RequestInit): Promise<LeadSyncResult> => {
+
+  return customFetch<LeadSyncResult>(getSyncLeadsFromMetaUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getSyncLeadsFromMetaMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof syncLeadsFromMeta>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof syncLeadsFromMeta>>, TError,void, TContext> => {
+
+const mutationKey = ['syncLeadsFromMeta'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof syncLeadsFromMeta>>, void> = () => {
+
+
+          return  syncLeadsFromMeta(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SyncLeadsFromMetaMutationResult = NonNullable<Awaited<ReturnType<typeof syncLeadsFromMeta>>>
+
+    export type SyncLeadsFromMetaMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Import Meta lead gen form submissions as leads
+ */
+export const useSyncLeadsFromMeta = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof syncLeadsFromMeta>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof syncLeadsFromMeta>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getSyncLeadsFromMetaMutationOptions(options));
+    }
+
 export const getGetMetaAdsReportUrl = () => {
 
 

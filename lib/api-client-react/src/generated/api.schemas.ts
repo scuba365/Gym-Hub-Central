@@ -614,12 +614,22 @@ export interface MetaAdsWeek {
   gtuRevenue: number;
 }
 
+export interface ChallengeConversionStats {
+  /** Total unique customers who have ever done a challenge/trial */
+  totalChallenges: number;
+  /** How many of those went on to get a Small Group PT membership */
+  converted: number;
+  /** Percentage of challenge alumni who converted to SGPT */
+  conversionRate: number;
+}
+
 export interface MetaAdsReport {
   weeks: MetaAdsWeek[];
   currency: string;
   adAccountName: string;
   /** Whether GoTeamUp token is configured and sales data is available */
   gtuConnected: boolean;
+  challengeToSgpt?: ChallengeConversionStats;
 }
 
 export type ListClientsParams = {

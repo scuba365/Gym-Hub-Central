@@ -278,4 +278,112 @@ router.post("/leads/sync/goteamup", async (req, res) => {
   }
 });
 
+// ─── Meta lead gen form import ────────────────────────────────────────────────
+
+interface MetaLeadFieldData {
+  name: string;
+  values: string[];
+}
+
+interface MetaLead {
+  id: string;
+  created_time: string;
+  field_data: MetaLeadFieldData[];
+  ad_name?: string;
+  campaign_name?: string;
+}
+
+interface MetaLeadsPage {
+  data: MetaLead[];
+  paging?: { cursors?: { after?: string }; next?: string };
+}
+
+function parseMetaLeadField(fieldData: MetaLeadFieldData[], fieldName: string): string | null {
+  const field = fieldData.find((f) => f.name === fieldName);
+  return field?.values?.[0] ?? null;
+}
+
+function parseMetaLeadName(fieldData: MetaLeadFieldData[]): string | null {
+  // Try full_name first, then first_name + last_name
+  const fullName = parseMetaLeadField(fieldData, "full_name");
+  if (fullName) return fullName.trim();
+  const first = parseMetaLeadField(fieldData, "first_name") ?? "";
+  const last = parseMetaLeadField(fieldData, "last_name") ?? "";
+  const combined = `${first} ${last}`.trim();
+  return combined || null;
+}
+
+router.post("/leads/sync/meta", async (req, res) => {
+  const metaToken = process.env.META_ACCESS_TOKEN;
+  const adAccountId = process.env.META_AD_ACCOUNT_ID;
+
+  if (!metaToken || !adAccountId) {
+    return res.status(503).json({ error: "META_ACCESS_TOKEN or META_AD_ACCOUNT_ID not configured" });
+  }
+
+  try {
+    // Fetch existing externalIds to avoid duplicates
+    const existingLeads = await db.select({ externalId: leadsTable.externalId }).from(leadsTable);
+    const existingExternalIds = new Set(existingLeads.map((l) => l.externalId).filter(Boolean));
+
+    let created = 0;
+    let skipped = 0;
+    let errors = 0;
+
+    // Fetch all leads from the ad account via the leadgen API
+    const fields = "id,created_time,field_data,ad_name,campaign_name,platform";
+    let nextUrl: string | null =
+      `https://graph.facebook.com/v20.0/${adAccountId}/leads?fields=${encodeURIComponent(fields)}&limit=100&access_token=${metaToken}`;
+
+    while (nextUrl) {
+      const resp = await fetch(nextUrl);
+      if (!resp.ok) {
+        const errBody = await resp.json();
+        logger.error({ errBody }, "Leads: Meta API error during sync");
+        return res.status(502).json({ error: "Meta API error", detail: errBody });
+      }
+      const page = (await resp.json()) as MetaLeadsPage;
+
+      for (const lead of page.data ?? []) {
+        const externalId = `meta_${lead.id}`;
+        if (existingExternalIds.has(externalId)) { skipped++; continue; }
+
+        const name = parseMetaLeadName(lead.field_data);
+        if (!name) { errors++; continue; }
+
+        const email =
+          parseMetaLeadField(lead.field_data, "email") ??
+          parseMetaLeadField(lead.field_data, "email_address");
+        const phone =
+          parseMetaLeadField(lead.field_data, "phone_number") ??
+          parseMetaLeadField(lead.field_data, "phone");
+
+        try {
+          await db.insert(leadsTable).values({
+            name,
+            email: email ?? null,
+            phone: phone ?? null,
+            source: "facebook",
+            status: "new",
+            externalId,
+            notes: lead.campaign_name ? `Campaign: ${lead.campaign_name}` : null,
+          });
+          existingExternalIds.add(externalId);
+          created++;
+        } catch {
+          errors++;
+        }
+      }
+
+      nextUrl = page.paging?.next ?? null;
+    }
+
+    logger.info({ created, skipped, errors }, "Leads: Meta sync complete");
+    return res.json({ created, skipped, errors });
+  } catch (err) {
+    logger.error({ err }, "Leads: Meta sync failed");
+    return res.status(500).json({ error: "Sync failed" });
+  }
+});
+
 export default router;

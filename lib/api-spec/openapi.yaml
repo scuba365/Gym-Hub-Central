@@ -708,6 +708,25 @@ paths:
               schema:
                 $ref: "#/components/schemas/LeadSyncResult"
 
+  /leads/sync/meta:
+    post:
+      operationId: syncLeadsFromMeta
+      tags: [leads]
+      summary: Import Meta lead gen form submissions as leads
+      responses:
+        "200":
+          description: Sync result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LeadSyncResult"
+        "503":
+          description: Meta credentials not configured
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /ads/meta:
     get:
       operationId: getMetaAdsReport
@@ -1671,6 +1690,23 @@ components:
         - gtuSales
         - gtuRevenue
 
+    ChallengeConversionStats:
+      type: object
+      properties:
+        totalChallenges:
+          type: integer
+          description: Total unique customers who have ever done a challenge/trial
+        converted:
+          type: integer
+          description: How many of those went on to get a Small Group PT membership
+        conversionRate:
+          type: integer
+          description: Percentage of challenge alumni who converted to SGPT
+      required:
+        - totalChallenges
+        - converted
+        - conversionRate
+
     MetaAdsReport:
       type: object
       properties:
@@ -1685,6 +1721,8 @@ components:
         gtuConnected:
           type: boolean
           description: Whether GoTeamUp token is configured and sales data is available
+        challengeToSgpt:
+          $ref: "#/components/schemas/ChallengeConversionStats"
       required:
         - weeks
         - currency

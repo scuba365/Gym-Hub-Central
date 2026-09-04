@@ -752,6 +752,16 @@ export const SyncLeadsFromGoteamupResponse = zod.object({
 
 
 /**
+ * @summary Import Meta lead gen form submissions as leads
+ */
+export const SyncLeadsFromMetaResponse = zod.object({
+  "created": zod.number(),
+  "skipped": zod.number(),
+  "errors": zod.number()
+})
+
+
+/**
  * Returns the last 8 weeks of Meta Ads insights (spend, impressions, clicks, leads, conversions)
  * @summary Fetch Meta Ads weekly performance data
  */
@@ -771,7 +781,12 @@ export const GetMetaAdsReportResponse = zod.object({
 })),
   "currency": zod.string(),
   "adAccountName": zod.string(),
-  "gtuConnected": zod.boolean().describe('Whether GoTeamUp token is configured and sales data is available')
+  "gtuConnected": zod.boolean().describe('Whether GoTeamUp token is configured and sales data is available'),
+  "challengeToSgpt": zod.object({
+  "totalChallenges": zod.number().describe('Total unique customers who have ever done a challenge\/trial'),
+  "converted": zod.number().describe('How many of those went on to get a Small Group PT membership'),
+  "conversionRate": zod.number().describe('Percentage of challenge alumni who converted to SGPT')
+}).optional()
 })
 
 

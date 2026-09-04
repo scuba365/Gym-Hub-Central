@@ -229,7 +229,7 @@ export default function Ads() {
             {[
               { label: "Total Spend", value: fmtEuro(totals.spend) },
               { label: "Total Leads", value: fmt(totals.leads) },
-              { label: "Total Sales (GTU)", value: fmt(totals.sales) },
+              { label: "Challenge Sales (GTU)", value: fmt(totals.sales) },
               { label: "ROAS", value: totalRoas > 0 ? `${fmt(totalRoas, 1)}×` : "—" },
             ].map((s) => (
               <Card key={s.label} className="border-border/50">
@@ -240,6 +240,39 @@ export default function Ads() {
               </Card>
             ))}
           </div>
+
+          {/* Challenge → SGPT conversion funnel */}
+          {data.gtuConnected && data.challengeToSgpt && (
+            <Card className="mb-6 border-border/50">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
+                  Challenge → Small Group PT Conversion
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center gap-4">
+                  <div className="text-center">
+                    <p className="text-2xl font-bold">{data.challengeToSgpt.totalChallenges}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">Total Challenge Alumni</p>
+                  </div>
+                  <div className="flex-1 h-px bg-border relative">
+                    <div
+                      className="absolute inset-y-0 left-0 bg-green-500/60 rounded"
+                      style={{ width: `${data.challengeToSgpt.conversionRate}%` }}
+                    />
+                  </div>
+                  <div className="text-center">
+                    <p className="text-2xl font-bold text-green-400">{data.challengeToSgpt.converted}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">Converted to SGPT</p>
+                  </div>
+                  <div className="text-center min-w-[80px]">
+                    <p className="text-2xl font-bold text-green-400">{data.challengeToSgpt.conversionRate}%</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">Conversion Rate</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Weekly table */}
           {weeks.length === 0 ? (

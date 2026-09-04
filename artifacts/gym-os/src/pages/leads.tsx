@@ -7,6 +7,7 @@ import {
   useDeleteLead,
   getListLeadsQueryKey,
   useSyncLeadsFromGoteamup,
+  useSyncLeadsFromMeta,
   usePromoteLeadToClient,
 } from "@workspace/api-client-react";
 import type { Lead, LeadStatus, LeadSource } from "@workspace/api-client-react";
@@ -205,6 +206,16 @@ export default function Leads() {
     },
   });
 
+  const syncMetaMutation = useSyncLeadsFromMeta({
+    mutation: {
+      onSuccess: (result) => {
+        queryClient.invalidateQueries({ queryKey: getListLeadsQueryKey() });
+        toast({ title: `Meta sync: ${result.created} new leads, ${result.skipped} already existed` });
+      },
+      onError: () => toast({ title: "Meta sync failed — check META_ACCESS_TOKEN has leads_retrieval permission", variant: "destructive" }),
+    },
+  });
+
   const promoteMutation = usePromoteLeadToClient({
     mutation: {
       onSuccess: (result) => {
@@ -321,6 +332,16 @@ export default function Leads() {
           <h1 className="text-2xl font-display font-bold text-foreground tracking-tight">Leads</h1>
         </div>
         <div className="flex items-center gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => syncMetaMutation.mutate()}
+            disabled={syncMetaMutation.isPending}
+            className="gap-1"
+          >
+            <UserPlus className="h-4 w-4" />
+            {syncMetaMutation.isPending ? "Syncing…" : "Sync Meta"}
+          </Button>
           <Button
             size="sm"
             variant="outline"

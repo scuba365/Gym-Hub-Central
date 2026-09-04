@@ -12,6 +12,16 @@ const TRIAL_PLAN_NAMES = new Set([
   "6 week challenge",
 ]);
 
+const SGPT_PLAN_NAMES = new Set([
+  "small group pt membership x2",
+  "small group pt membership x3",
+  "small group pt membership x4",
+  "level up",
+  "lifetime membership",
+  "couples membership",
+  "summer coaching",
+]);
+
 interface MetaInsightRow {
   date_start: string;
   date_stop: string;
@@ -83,14 +93,14 @@ router.get("/ads/meta", async (req, res) => {
       `&level=account` +
       `&access_token=${metaToken}`;
 
-    // Fetch Meta insights + account info in parallel
-    // Also fetch GoTeamUp memberships if token is available
-    const [insightsResp, accountResp, gtuMemberships] = await Promise.all([
+    // Fetch Meta insights + account info + all GTU memberships in parallel
+    // Fetch ALL memberships (no status filter) so we can track completed challenges that converted
+    const [insightsResp, accountResp, allMemberships] = await Promise.all([
       fetch(insightsUrl),
       fetch(`${GRAPH_BASE}/${adAccountId}?fields=name,currency&access_token=${metaToken}`),
       gtuToken
         ? goteamupFetchAll<GTUMembership>(
-            `${GOTEAMUP_BASE}/customer_memberships?page_size=${PAGE_SIZE}&status=active`,
+            `${GOTEAMUP_BASE}/customer_memberships?page_size=${PAGE_SIZE}`,
             gtuToken
           ).catch(() => [] as GTUMembership[])
         : Promise.resolve([] as GTUMembership[]),
@@ -105,19 +115,39 @@ router.get("/ads/meta", async (req, res) => {
     const insightsData = (await insightsResp.json()) as { data: MetaInsightRow[] };
     const accountData = accountResp.ok ? ((await accountResp.json()) as { name?: string; currency?: string }) : {};
 
-    // Filter GTU memberships to trial/challenge plans started within our window
-    const trialMemberships = gtuMemberships.filter((m) => {
-      if (!TRIAL_PLAN_NAMES.has((m.name ?? "").toLowerCase().trim())) return false;
-      if (!m.start_date) return false;
-      return m.start_date >= since && m.start_date <= until;
-    });
+    // Partition memberships by type
+    const trialMemberships = allMemberships.filter(
+      (m) => TRIAL_PLAN_NAMES.has((m.name ?? "").toLowerCase().trim())
+    );
+    const sgptMemberships = allMemberships.filter(
+      (m) => SGPT_PLAN_NAMES.has((m.name ?? "").toLowerCase().trim())
+    );
+
+    // Challenge → SGPT conversion: customers who had a challenge AND have an SGPT membership
+    const trialCustomerIds = new Set(trialMemberships.map((m) => m.customer));
+    const sgptCustomerIds = new Set(sgptMemberships.map((m) => m.customer));
+    const convertedCustomerIds = new Set(
+      [...sgptCustomerIds].filter((id) => trialCustomerIds.has(id))
+    );
+
+    const challengeToSgpt = {
+      totalChallenges: trialCustomerIds.size,
+      converted: convertedCustomerIds.size,
+      conversionRate: trialCustomerIds.size > 0
+        ? Math.round((convertedCustomerIds.size / trialCustomerIds.size) * 100)
+        : 0,
+    };
+
+    // Weekly sales: challenge signups whose start_date falls within each Meta week
+    const trialInWindow = trialMemberships.filter(
+      (m) => m.start_date && m.start_date >= since && m.start_date <= until
+    );
 
     const LEAD_TYPES = ["lead", "onsite_conversion.lead_grouped", "contact"];
     const PURCHASE_TYPES = ["purchase", "offsite_conversion.fb_pixel_purchase", "omni_purchase"];
 
     const weeks = (insightsData.data ?? []).map((row) => {
-      // Count GTU signups whose start_date falls in this Meta week
-      const weekSignups = trialMemberships.filter(
+      const weekSignups = trialInWindow.filter(
         (m) => m.start_date! >= row.date_start && m.start_date! <= row.date_stop
       );
       const gtuSales = weekSignups.length;
@@ -139,8 +169,13 @@ router.get("/ads/meta", async (req, res) => {
     });
 
     logger.info(
-      { weeks: weeks.length, gtuSignups: trialMemberships.length },
-      "Meta Ads: fetched insights + GTU sales"
+      {
+        weeks: weeks.length,
+        gtuSignups: trialInWindow.length,
+        challengeConverted: challengeToSgpt.converted,
+        challengeTotal: challengeToSgpt.totalChallenges,
+      },
+      "Meta Ads: fetched insights + GTU sales + conversion stats"
     );
 
     return res.json({
@@ -148,6 +183,7 @@ router.get("/ads/meta", async (req, res) => {
       currency: accountData.currency ?? "EUR",
       adAccountName: accountData.name ?? adAccountId,
       gtuConnected: !!gtuToken,
+      challengeToSgpt,
     });
   } catch (err) {
     logger.error({ err }, "Meta Ads: fetch failed");

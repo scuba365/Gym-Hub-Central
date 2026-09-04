@@ -13,6 +13,7 @@ export * from './aiInsightReport';
 export * from './aiInsightStrength';
 export * from './attendanceHeatmapRow';
 export * from './attendanceRecord';
+export * from './challengeConversionStats';
 export * from './checkinDraft';
 export * from './checkinDraftStatus';
 export * from './checkinDraftUpdate';
