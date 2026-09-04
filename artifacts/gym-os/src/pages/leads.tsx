@@ -40,7 +40,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, Plus, Trash2, Phone, Mail, UserPlus } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Phone, Mail, UserPlus, Search } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -149,6 +149,7 @@ export default function Leads() {
   const { toast } = useToast();
 
   const [activeStatus, setActiveStatus] = useState<LeadStatus | "all">("all");
+  const [search, setSearch] = useState("");
   const [addOpen, setAddOpen] = useState(false);
   const [editLead, setEditLead] = useState<Lead | null>(null);
   const [deleteLead, setDeleteLead] = useState<Lead | null>(null);
@@ -218,10 +219,19 @@ export default function Leads() {
     return map;
   }, [leads]);
 
-  const filtered = useMemo(
-    () => (activeStatus === "all" ? leads : leads.filter((l) => l.status === activeStatus)),
-    [leads, activeStatus]
-  );
+  const filtered = useMemo(() => {
+    let list = activeStatus === "all" ? leads : leads.filter((l) => l.status === activeStatus);
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      list = list.filter(
+        (l) =>
+          l.name.toLowerCase().includes(q) ||
+          (l.email ?? "").toLowerCase().includes(q) ||
+          (l.phone ?? "").toLowerCase().includes(q)
+      );
+    }
+    return list;
+  }, [leads, activeStatus, search]);
 
   function handleStatusChange(lead: Lead, status: LeadStatus) {
     updateMutation.mutate({ id: lead.id, data: { status } });
@@ -277,6 +287,30 @@ export default function Leads() {
           <Plus className="h-4 w-4" />
           Add Lead
         </Button>
+      </div>
+
+      {/* Pipeline funnel stats */}
+      <div className="flex flex-wrap gap-2 mb-4">
+        {LEAD_STATUSES.map((s) => (
+          <button
+            key={s}
+            onClick={() => setActiveStatus(s)}
+            className={`px-3 py-1 rounded-full text-xs font-semibold border transition-colors ${statusColor(s)} ${activeStatus === s ? "ring-2 ring-offset-1 ring-primary/50" : ""}`}
+          >
+            {STATUS_LABELS[s]}: {counts[s] ?? 0}
+          </button>
+        ))}
+      </div>
+
+      {/* Search */}
+      <div className="relative mb-4">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+        <Input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search by name, phone or email…"
+          className="pl-9"
+        />
       </div>
 
       {/* Status tabs */}
@@ -446,6 +480,9 @@ function LeadCard({
         </div>
 
         {/* Notes preview */}
+        {lead.goalText && (
+          <p className="text-xs text-primary/70 italic line-clamp-1">🎯 {lead.goalText}</p>
+        )}
         {lead.notes && (
           <p className="text-xs text-muted-foreground line-clamp-2">{lead.notes}</p>
         )}

@@ -328,6 +328,7 @@ export default function Reports() {
         <CardHeader>
           <CardTitle className="text-base font-semibold uppercase tracking-wider">
             Revenue — Last 12 Months
+            <span className="ml-2 text-xs font-normal text-muted-foreground normal-case">(click a bar to see active members)</span>
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -343,7 +344,13 @@ export default function Reports() {
                   contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }}
                   formatter={(v: number) => [`€${v.toLocaleString("en-IE", { maximumFractionDigits: 0 })}`, "Revenue"]}
                 />
-                <Bar dataKey="revenue" fill="hsl(var(--chart-2))" radius={[4, 4, 0, 0]} />
+                <Bar
+                  dataKey="revenue"
+                  fill="hsl(var(--chart-2))"
+                  radius={[4, 4, 0, 0]}
+                  style={{ cursor: "pointer" }}
+                  onClick={(d) => openDrilldown(d.month, "active")}
+                />
               </BarChart>
             </ResponsiveContainer>
           )}
